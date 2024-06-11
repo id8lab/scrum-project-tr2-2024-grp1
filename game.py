@@ -11,7 +11,6 @@ class Game:
         self.clock = pygame.time.Clock()
         self.running = True
 
-        # Create player
         self.player = Player(width//2, height - 60)
 
         # Create enemies
