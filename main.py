@@ -59,13 +59,14 @@ player_image = pygame.image.load("player.png").convert_alpha()
 player_image = pygame.transform.scale(player_image, (50, 50))
 enemy_image = pygame.image.load("enemy.png").convert_alpha()
 enemy_image = pygame.transform.scale(enemy_image, (100, 100))
+
 # Game objects
 class Player(pygame.sprite.Sprite):
     def __init__(self):
         super().__init__()
         self.image = player_image
         self.rect = self.image.get_rect(midbottom=(WIDTH // 2, HEIGHT - 10))
-        self.speed = 1 # Adjust the player's movement speed
+        self.speed = 1
         self.lives = 3
 
     def update(self, keys):
@@ -75,8 +76,6 @@ class Player(pygame.sprite.Sprite):
             self.rect.x += self.speed
         # Ensure the player stays within the screen boundaries
         self.rect.x = max(0, min(self.rect.x, WIDTH - self.rect.width))
-
-        # Adjust the speed of the player's movement
 
     def shoot(self):
         bullet = Bullet(self.rect.centerx, self.rect.top)
@@ -109,7 +108,6 @@ class Bullet(pygame.sprite.Sprite):
         if self.rect.bottom < 0:
             self.kill()
 
-
 def game_over():
     game_over_text = font.render("Game Over", True, WHITE)
     game_over_rect = game_over_text.get_rect(center=(WIDTH // 2, HEIGHT // 2))
@@ -118,7 +116,45 @@ def game_over():
     pygame.time.wait(2000)
     main_menu()
 
+def settings_menu():
+    running = True
+    while running:
+        screen.fill((0, 0, 0))
+
+        for star in stars:
+            star.move()
+            star.draw(screen)
+
+        settings_text = font.render("Settings", True, WHITE)
+        settings_rect = settings_text.get_rect(center=(WIDTH // 2, HEIGHT // 4))
+        screen.blit(settings_text, settings_rect)
+
+        resume_btn = create_button("Resume", WIDTH // 2, HEIGHT // 2 - 60)
+        settings_btn = create_button("Settings", WIDTH // 2, HEIGHT // 2)
+        exit_btn = create_button("Exit", WIDTH // 2, HEIGHT // 2 + 60)
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                mouse_pos = event.pos
+                if resume_btn.collidepoint(mouse_pos):
+                    running = False
+                elif settings_btn.collidepoint(mouse_pos):
+                    print("Settings button clicked")
+                elif exit_btn.collidepoint(mouse_pos):
+                    main_menu()
+
+        pygame.display.flip()
+
 def main_game():
+    global all_sprites, bullets, enemies
+    # Re-initialize sprite groups
+    all_sprites = pygame.sprite.Group()
+    bullets = pygame.sprite.Group()
+    enemies = pygame.sprite.Group()
+    
     player = Player()
     all_sprites.add(player)
 
@@ -137,20 +173,20 @@ def main_game():
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_SPACE:
                     player.shoot()
+                elif event.key == pygame.K_ESCAPE:
+                    settings_menu()
             elif event.type == enemy_spawn_event:
                 enemy = Enemy(random.randint(0, WIDTH - 40), -40)
                 all_sprites.add(enemy)
                 enemies.add(enemy)
 
         keys = pygame.key.get_pressed()
-
-        player.update(keys)  # Update the player with keys
+        player.update(keys)
 
         for sprite in all_sprites:
             if sprite != player:
-                sprite.update()  # Update other sprites without arguments
+                sprite.update()
 
-        # Check for collisions
         hits = pygame.sprite.groupcollide(bullets, enemies, True, True)
         for hit in hits:
             score += 10
@@ -162,14 +198,11 @@ def main_game():
             if player.lives <= 0:
                 game_over()
 
-        # Drawing
         screen.fill((0, 0, 0))
         for star in stars:
             star.move()
-            # star.draw(screen)
+            star.draw(screen)
         
-        # enemies.draw(screen)
-
         all_sprites.draw(screen)
 
         score_text = score_font.render(f"Score: {score}", True, WHITE)
@@ -180,7 +213,6 @@ def main_game():
 
         pygame.display.flip()
 
-
 def main_menu():
     running = True
     while running:
@@ -190,20 +222,16 @@ def main_menu():
             star.move()
             star.draw(screen)
 
-        # Title
         title_text = font.render("Space Shooter", True, WHITE)
         title_rect = title_text.get_rect(center=(WIDTH // 2, HEIGHT // 4))
         screen.blit(title_text, title_rect)
 
-        # Buttons
         single_player_btn = create_button("Single Player", WIDTH // 2, HEIGHT // 2 - 60)
         multiplayer_btn = create_button("Multiplayer", WIDTH // 2, HEIGHT // 2)
         scores_btn = create_button("Scores", WIDTH // 2, HEIGHT // 2 + 60)
         settings_btn = create_button("Settings", WIDTH // 2, HEIGHT // 2 + 120)
+        exit_btn = create_button("Exit", WIDTH // 2, HEIGHT // 2 + 180)
 
-    
-
-        # Event handling
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
@@ -217,6 +245,8 @@ def main_menu():
                     print("Scores button clicked")
                 elif settings_btn.collidepoint(mouse_pos):
                     print("Settings button clicked")
+                elif exit_btn.collidepoint(mouse_pos):
+                    running = False
 
         pygame.display.flip()
 
