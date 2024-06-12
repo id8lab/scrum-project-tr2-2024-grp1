@@ -246,6 +246,7 @@ def main_menu():
                 elif settings_btn.collidepoint(mouse_pos):
                     print("Settings button clicked")
                 elif exit_btn.collidepoint(mouse_pos):
+
                     running = False
 
         pygame.display.flip()
