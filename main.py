@@ -6,8 +6,8 @@ import random
 pygame.init()
 
 # Screen dimensions
-WIDTH, HEIGHT = 800, 600
-screen = pygame.display.set_mode((WIDTH, HEIGHT))
+screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
+WIDTH, HEIGHT = screen.get_size()
 pygame.display.set_caption("Space Shooter")
 
 # Colors
@@ -216,6 +216,7 @@ def main_menu():
         multiplayer_btn = create_button("Multiplayer", WIDTH // 2, HEIGHT // 2)
         scores_btn = create_button("Scores", WIDTH // 2, HEIGHT // 2 + 60)
         settings_btn = create_button("Settings", WIDTH // 2, HEIGHT // 2 + 120)
+        exit_btn = create_button("Exit", WIDTH // 2, HEIGHT // 2 + 180)
 
     
 
@@ -233,6 +234,8 @@ def main_menu():
                     print("Scores button clicked")
                 elif settings_btn.collidepoint(mouse_pos):
                     print("Settings button clicked")
+                elif exit_btn.collidepoint(mouse_pos):  # Exit button click handling
+                    running = False
 
         pygame.display.flip()
 
