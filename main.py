@@ -158,6 +158,9 @@ def main_game():
     player = Player()
     all_sprites.add(player)
 
+    LEVELS = 3  # Total number of levels
+    level = 1   # Current level
+    level_score_requirement = 10  
     score = 0
     lives = player.lives
 
@@ -189,7 +192,7 @@ def main_game():
 
         hits = pygame.sprite.groupcollide(bullets, enemies, True, True)
         for hit in hits:
-            score += 10
+            score += 1
 
         enemy_hits = pygame.sprite.spritecollide(player, enemies, True)
         if enemy_hits:
@@ -198,6 +201,14 @@ def main_game():
             if player.lives <= 0:
                 game_over()
 
+
+        # Check if the player has reached the score requirement for the next level
+        if score >= level * level_score_requirement and level < LEVELS:
+            level += 1
+            # Adjust any level-specific parameters here, like enemy spawn rate
+            pygame.time.set_timer(enemy_spawn_event, 1000 // level)
+
+        # Drawing
         screen.fill((0, 0, 0))
         for star in stars:
             star.move()
@@ -211,8 +222,11 @@ def main_game():
         lives_text = score_font.render(f"Lives: {lives}", True, WHITE)
         screen.blit(lives_text, (WIDTH - 110, 10))
 
-        pygame.display.flip()
+        # Display current level
+        level_text = score_font.render(f"Level: {level}", True, WHITE)
+        screen.blit(level_text, (WIDTH // 2 - 50, 10))
 
+        pygame.display.flip()
 def main_menu():
     running = True
     while running:
