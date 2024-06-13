@@ -22,6 +22,10 @@ pygame.mixer.music.play(-1)  # -1 means the music will loop indefinitely
 # Load shooting sound
 shooting_sound = pygame.mixer.Sound("laser.mp3")
 
+# Load explosion image
+explosion_image = pygame.image.load("explosion.png").convert_alpha()
+explosion_image = pygame.transform.scale(explosion_image, (150, 150))  # Adjust the size as needed
+
 # Font
 font = pygame.font.Font(None, 74)
 button_font = pygame.font.Font(None, 50)
@@ -108,6 +112,18 @@ class Bullet(pygame.sprite.Sprite):
         if self.rect.bottom < 0:
             self.kill()
 
+class Explosion(pygame.sprite.Sprite):
+    def __init__(self, x, y):
+        super().__init__()
+        self.image = explosion_image
+        self.rect = self.image.get_rect(center=(x, y))
+        self.timer = 100  # Duration of the explosion effect
+
+    def update(self):
+        self.timer -= 1
+        if self.timer <= 0:
+            self.kill()
+
 def game_over():
     game_over_text = font.render("Game Over", True, WHITE)
     game_over_rect = game_over_text.get_rect(center=(WIDTH // 2, HEIGHT // 2))
@@ -149,11 +165,12 @@ def settings_menu():
         pygame.display.flip()
 
 def main_game():
-    global all_sprites, bullets, enemies
+    global all_sprites, bullets, enemies, explosions
     # Re-initialize sprite groups
     all_sprites = pygame.sprite.Group()
     bullets = pygame.sprite.Group()
     enemies = pygame.sprite.Group()
+    explosions = pygame.sprite.Group()
     
     player = Player()
     all_sprites.add(player)
@@ -193,6 +210,10 @@ def main_game():
         hits = pygame.sprite.groupcollide(bullets, enemies, True, True)
         for hit in hits:
             score += 1
+            explosion = Explosion(hit.rect.centerx, hit.rect.centery)
+            all_sprites.add(explosion)
+            explosions.add(explosion)
+            # explosion_sound.play()  # Add this line if you want to include explosion sound
 
         enemy_hits = pygame.sprite.spritecollide(player, enemies, True)
         if enemy_hits:
@@ -200,7 +221,6 @@ def main_game():
             lives -= 1
             if player.lives <= 0:
                 game_over()
-
 
         # Check if the player has reached the score requirement for the next level
         if score >= level * level_score_requirement and level < LEVELS:
@@ -275,3 +295,4 @@ enemies = pygame.sprite.Group()
 
 # Start the main menu
 main_menu()
+
