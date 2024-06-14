@@ -139,7 +139,7 @@ class Explosion(pygame.sprite.Sprite):
 #     pygame.time.wait(2000)
 #     main_menu()
 
-def settings_menu(menu_title, score):
+def game_over(score):
     running = True
     while running:
         screen.fill((0, 0, 0))
@@ -148,14 +148,46 @@ def settings_menu(menu_title, score):
             star.move()
             star.draw(screen)
 
-        settings_text = font.render(menu_title, True, WHITE)
+        settings_text = font.render("GAME OVER", True, WHITE)
         settings_rect = settings_text.get_rect(center=(WIDTH // 2, HEIGHT // 3))
         screen.blit(settings_text, settings_rect)
 
-        if menu_title == "Game Over":
-            score_text = font.render("Your Score is " + str(score), True, YELLOW)
-            score_rect = score_text.get_rect(center=(WIDTH // 2, HEIGHT // 3 + 70))
-            screen.blit(score_text, score_rect)
+        score_text = font.render("Your Score is " + str(score), True, YELLOW)
+        score_rect = score_text.get_rect(center=(WIDTH // 2, HEIGHT // 3 + 70))
+        screen.blit(score_text, score_rect)
+
+        vertical_gap = 80
+        resume_btn = create_button("Replay", WIDTH // 2, HEIGHT // 2)
+        settings_btn = create_button("Settings", WIDTH // 2, HEIGHT // 2 + vertical_gap)
+        exit_btn = create_button("Exit", WIDTH // 2, HEIGHT // 2 + 2 * vertical_gap)
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                mouse_pos = event.pos
+                if resume_btn.collidepoint(mouse_pos):
+                    main_game()
+                elif settings_btn.collidepoint(mouse_pos):
+                    print("Settings button clicked")
+                elif exit_btn.collidepoint(mouse_pos):
+                    main_menu()
+
+        pygame.display.flip()
+
+def pause_menu():
+    running = True
+    while running:
+        screen.fill((0, 0, 0))
+
+        for star in stars:
+            star.move()
+            star.draw(screen)
+
+        settings_text = font.render("PAUSE", True, WHITE)
+        settings_rect = settings_text.get_rect(center=(WIDTH // 2, HEIGHT // 3))
+        screen.blit(settings_text, settings_rect)
 
         vertical_gap = 80
         resume_btn = create_button("Resume", WIDTH // 2, HEIGHT // 2)
@@ -207,7 +239,7 @@ def main_game():
                 if event.key == pygame.K_SPACE:
                     player.shoot()
                 elif event.key == pygame.K_ESCAPE:
-                    settings_menu("PAUSE",0)
+                    pause_menu()
             elif event.type == enemy_spawn_event:
                 enemy = Enemy(random.randint(0, WIDTH - 40), -40)
                 all_sprites.add(enemy)
@@ -233,7 +265,7 @@ def main_game():
             player.lives -= 1
             lives -= 1
             if player.lives <= 0:
-                settings_menu("Game Over", score)
+                game_over(score)
 
         # Check if the player has reached the score requirement for the next level
         if score >= level * level_score_requirement and level < LEVELS:
