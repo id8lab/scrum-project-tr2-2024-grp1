@@ -14,6 +14,7 @@ pygame.display.set_caption("Space Shooter")
 WHITE = (255, 255, 255)
 GRAY = (100, 100, 100)
 RED = (255, 0, 0)
+YELLOW = (255, 255, 0)
 
 # Load background music
 pygame.mixer.music.load("game.mp3")
@@ -130,15 +131,15 @@ class Explosion(pygame.sprite.Sprite):
         if self.timer <= 0:
             self.kill()
 
-def game_over():
-    game_over_text = font.render("Game Over", True, WHITE)
-    game_over_rect = game_over_text.get_rect(center=(WIDTH // 2, HEIGHT // 2))
-    screen.blit(game_over_text, game_over_rect)
-    pygame.display.flip()
-    pygame.time.wait(2000)
-    main_menu()
+# def game_over():
+#     game_over_text = font.render("Game Over", True, WHITE)
+#     game_over_rect = game_over_text.get_rect(center=(WIDTH // 2, HEIGHT // 2))
+#     screen.blit(game_over_text, game_over_rect)
+#     pygame.display.flip()
+#     pygame.time.wait(2000)
+#     main_menu()
 
-def settings_menu():
+def settings_menu(menu_title, score):
     running = True
     while running:
         screen.fill((0, 0, 0))
@@ -147,13 +148,19 @@ def settings_menu():
             star.move()
             star.draw(screen)
 
-        settings_text = font.render("Settings", True, WHITE)
-        settings_rect = settings_text.get_rect(center=(WIDTH // 2, HEIGHT // 4))
+        settings_text = font.render(menu_title, True, WHITE)
+        settings_rect = settings_text.get_rect(center=(WIDTH // 2, HEIGHT // 3))
         screen.blit(settings_text, settings_rect)
 
-        resume_btn = create_button("Resume", WIDTH // 2, HEIGHT // 2 - 60)
-        settings_btn = create_button("Settings", WIDTH // 2, HEIGHT // 2)
-        exit_btn = create_button("Exit", WIDTH // 2, HEIGHT // 2 + 60)
+        if menu_title == "Game Over":
+            score_text = font.render("Your Score is " + str(score), True, YELLOW)
+            score_rect = score_text.get_rect(center=(WIDTH // 2, HEIGHT // 3 + 70))
+            screen.blit(score_text, score_rect)
+
+        vertical_gap = 80
+        resume_btn = create_button("Resume", WIDTH // 2, HEIGHT // 2)
+        settings_btn = create_button("Settings", WIDTH // 2, HEIGHT // 2 + vertical_gap)
+        exit_btn = create_button("Exit", WIDTH // 2, HEIGHT // 2 + 2 * vertical_gap)
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -200,7 +207,7 @@ def main_game():
                 if event.key == pygame.K_SPACE:
                     player.shoot()
                 elif event.key == pygame.K_ESCAPE:
-                    settings_menu()
+                    settings_menu("PAUSE",0)
             elif event.type == enemy_spawn_event:
                 enemy = Enemy(random.randint(0, WIDTH - 40), -40)
                 all_sprites.add(enemy)
@@ -226,7 +233,7 @@ def main_game():
             player.lives -= 1
             lives -= 1
             if player.lives <= 0:
-                game_over()
+                settings_menu("Game Over", score)
 
         # Check if the player has reached the score requirement for the next level
         if score >= level * level_score_requirement and level < LEVELS:
@@ -262,15 +269,17 @@ def main_menu():
             star.move()
             star.draw(screen)
 
-        title_text = font.render("Space Shooter", True, WHITE)
+        title_text = font.render("Galaxia", True, WHITE)
         title_rect = title_text.get_rect(center=(WIDTH // 2, HEIGHT // 4))
         screen.blit(title_text, title_rect)
 
-        single_player_btn = create_button("Single Player", WIDTH // 2, HEIGHT // 2 - 60)
-        multiplayer_btn = create_button("Multiplayer", WIDTH // 2, HEIGHT // 2)
-        scores_btn = create_button("Scores", WIDTH // 2, HEIGHT // 2 + 60)
-        settings_btn = create_button("Settings", WIDTH // 2, HEIGHT // 2 + 120)
-        exit_btn = create_button("Exit", WIDTH // 2, HEIGHT // 2 + 180)
+        vertical_gap = 80
+
+        single_player_btn = create_button("Single Player", WIDTH // 2, HEIGHT // 2)
+        multiplayer_btn = create_button("Multiplayer", WIDTH // 2, HEIGHT // 2 + vertical_gap)
+        scores_btn = create_button("Scores", WIDTH // 2, HEIGHT // 2 + 2 * vertical_gap)
+        settings_btn = create_button("Settings", WIDTH // 2, HEIGHT // 2 + 3 * vertical_gap)
+        exit_btn = create_button("Exit", WIDTH // 2, HEIGHT // 2 + 4 * vertical_gap)
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -301,4 +310,3 @@ enemies = pygame.sprite.Group()
 
 # Start the main menu
 main_menu()
-
