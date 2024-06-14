@@ -2,7 +2,7 @@ import pygame
 import sys
 import random
 
-# Initialize Pygame
+# Initialize Pygame here
 pygame.init()
 
 # Screen dimensions
@@ -17,10 +17,16 @@ RED = (255, 0, 0)
 
 # Load background music
 pygame.mixer.music.load("game.mp3")
-pygame.mixer.music.play(-1)  # -1 means the music will loop indefinitely
+pygame.mixer.music.play(-1)
+pygame.mixer.music.set_volume(0.3)# -1 means the music will loop indefinitely
+
+# Load explosion sfx
+explosion_sound = pygame.mixer.Sound("explosion.mp3")
+explosion_sound.set_volume(1.0)
 
 # Load shooting sound
 shooting_sound = pygame.mixer.Sound("laser.mp3")
+shooting_sound.set_volume(0.2)
 
 # Load explosion image
 explosion_image = pygame.image.load("explosion.png").convert_alpha()
@@ -213,7 +219,7 @@ def main_game():
             explosion = Explosion(hit.rect.centerx, hit.rect.centery)
             all_sprites.add(explosion)
             explosions.add(explosion)
-            # explosion_sound.play()  # Add this line if you want to include explosion sound
+            explosion_sound.play()
 
         enemy_hits = pygame.sprite.spritecollide(player, enemies, True)
         if enemy_hits:
