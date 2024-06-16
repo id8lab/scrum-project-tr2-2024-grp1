@@ -8,7 +8,7 @@ pygame.init()
 # Screen dimensions
 screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
 WIDTH, HEIGHT = screen.get_size()
-pygame.display.set_caption("Space Shooter")
+pygame.display.set_caption("Galaxia")
 
 # Colors
 WHITE = (255, 255, 255)
