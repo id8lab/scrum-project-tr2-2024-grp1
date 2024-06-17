@@ -1,6 +1,7 @@
 import pygame
 import sys
 import random
+import math
 
 # Initialize Pygame here
 pygame.init()
@@ -18,7 +19,7 @@ RED = (255, 0, 0)
 # Load background music
 pygame.mixer.music.load("game.mp3")
 pygame.mixer.music.play(-1)
-pygame.mixer.music.set_volume(0.3)# -1 means the music will loop indefinitely
+pygame.mixer.music.set_volume(0.3)  # -1 means the music will loop indefinitely
 
 # Load explosion sfx
 explosion_sound = pygame.mixer.Sound("explosion.mp3")
@@ -76,14 +77,16 @@ class Player(pygame.sprite.Sprite):
         super().__init__()
         self.image = player_image
         self.rect = self.image.get_rect(midbottom=(WIDTH // 2, HEIGHT - 10))
-        self.speed = 1
+        self.speed = 2  # Adjust this value to change the player's ship speed
         self.lives = 3
 
     def update(self, keys):
-        if keys[pygame.K_LEFT]:  # Allow continuous movement to the left
+        # Move the player's ship based on the keys pressed
+        if keys[pygame.K_LEFT]:
             self.rect.x -= self.speed
-        if keys[pygame.K_RIGHT]:  # Allow continuous movement to the right
+        if keys[pygame.K_RIGHT]:
             self.rect.x += self.speed
+        
         # Ensure the player stays within the screen boundaries
         self.rect.x = max(0, min(self.rect.x, WIDTH - self.rect.width))
 
@@ -98,11 +101,17 @@ class Enemy(pygame.sprite.Sprite):
         super().__init__()
         self.image = enemy_image
         self.rect = self.image.get_rect(topleft=(x, y))
-        self.speed = 0.6  # Adjust the speed of the enemies
+        self.speed_y = random.uniform(0.5, 1.0)  # Adjust the vertical speed of the enemies
+        self.amplitude = random.uniform(30, 80)  # Amplitude of the sine wave
+        self.frequency = random.uniform(0.01, 0.03)  # Frequency of the sine wave
+        self.start_x = x  # Store the initial x position
+        self.time = 0  # Time counter for the sine wave
 
     def update(self):
-        self.rect.y += self.speed
-        if self.rect.top > HEIGHT:  # Check if the enemy is off the screen
+        self.rect.y += self.speed_y
+        self.rect.x = self.start_x + self.amplitude * math.sin(self.frequency * self.time)
+        self.time += 1
+        if self.rect.top > HEIGHT or self.rect.right < 0 or self.rect.left > WIDTH:  # Check if the enemy is off the screen
             self.kill()
 
 class Bullet(pygame.sprite.Sprite):
@@ -253,6 +262,7 @@ def main_game():
         screen.blit(level_text, (WIDTH // 2 - 50, 10))
 
         pygame.display.flip()
+
 def main_menu():
     running = True
     while running:
@@ -286,7 +296,6 @@ def main_menu():
                 elif settings_btn.collidepoint(mouse_pos):
                     print("Settings button clicked")
                 elif exit_btn.collidepoint(mouse_pos):
-
                     running = False
 
         pygame.display.flip()
@@ -301,4 +310,3 @@ enemies = pygame.sprite.Group()
 
 # Start the main menu
 main_menu()
-
