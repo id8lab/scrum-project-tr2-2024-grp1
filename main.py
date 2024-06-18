@@ -71,6 +71,10 @@ player_image = pygame.transform.scale(player_image, (50, 50))
 enemy_image = pygame.image.load("enemy.png").convert_alpha()
 enemy_image = pygame.transform.scale(enemy_image, (100, 100))
 
+# Load weapon supply image
+weapon_supply_image = pygame.image.load("weapon_supply.png").convert_alpha()
+weapon_supply_image = pygame.transform.scale(weapon_supply_image, (80, 80))
+
 # Game objects
 class Player(pygame.sprite.Sprite):
     def __init__(self):
@@ -79,6 +83,7 @@ class Player(pygame.sprite.Sprite):
         self.rect = self.image.get_rect(midbottom=(WIDTH // 2, HEIGHT - 10))
         self.speed = 1
         self.lives = 3
+        self.bullet_count = 1
 
     def update(self, keys):
         if keys[pygame.K_LEFT]:  # Allow continuous movement to the left
@@ -89,9 +94,21 @@ class Player(pygame.sprite.Sprite):
         self.rect.x = max(0, min(self.rect.x, WIDTH - self.rect.width))
 
     def shoot(self):
-        bullet = Bullet(self.rect.centerx, self.rect.top)
-        all_sprites.add(bullet)
-        bullets.add(bullet)
+        if self.bullet_count == 1:
+            bullet = Bullet(self.rect.centerx, self.rect.top)
+            all_sprites.add(bullet)
+            bullets.add(bullet)
+        elif self.bullet_count == 2:
+            bullet1 = Bullet(self.rect.left, self.rect.top)
+            bullet2 = Bullet(self.rect.right, self.rect.top)
+            all_sprites.add(bullet1, bullet2)
+            bullets.add(bullet1, bullet2)
+        elif self.bullet_count >= 3:
+            bullet1 = Bullet(self.rect.left, self.rect.top)
+            bullet2 = Bullet(self.rect.centerx, self.rect.top)
+            bullet3 = Bullet(self.rect.right, self.rect.top)
+            all_sprites.add(bullet1, bullet2, bullet3)
+            bullets.add(bullet1, bullet2, bullet3)
         shooting_sound.play()
 
 class Enemy(pygame.sprite.Sprite):
@@ -130,6 +147,20 @@ class Explosion(pygame.sprite.Sprite):
         self.timer -= 1
         if self.timer <= 0:
             self.kill()
+
+
+class WeaponSupply(pygame.sprite.Sprite):
+    def __init__(self):
+        super().__init__()
+        self.image = weapon_supply_image
+        self.rect = self.image.get_rect(center=(random.randint(0, WIDTH), -20))
+        self.speed = 0.9
+
+    def update(self):
+        self.rect.y += self.speed
+        if self.rect.top > HEIGHT:
+            self.kill()
+
 
 # def game_over():
 #     game_over_text = font.render("Game Over", True, WHITE)
@@ -210,12 +241,13 @@ def pause_menu():
         pygame.display.flip()
 
 def main_game():
-    global all_sprites, bullets, enemies, explosions
+    global all_sprites, bullets, enemies, explosions, weapon_supplies
     # Re-initialize sprite groups
     all_sprites = pygame.sprite.Group()
     bullets = pygame.sprite.Group()
     enemies = pygame.sprite.Group()
     explosions = pygame.sprite.Group()
+    weapon_supplies = pygame.sprite.Group()
     
     player = Player()
     all_sprites.add(player)
@@ -228,6 +260,9 @@ def main_game():
 
     enemy_spawn_event = pygame.USEREVENT + 1
     pygame.time.set_timer(enemy_spawn_event, 1000)
+
+    weapon_supply_event = pygame.USEREVENT + 2
+    pygame.time.set_timer(weapon_supply_event, 5000)  # Adjust the time as needed
 
     running = True
     while running:
@@ -244,6 +279,10 @@ def main_game():
                 enemy = Enemy(random.randint(0, WIDTH - 40), -40)
                 all_sprites.add(enemy)
                 enemies.add(enemy)
+            elif event.type == weapon_supply_event:
+                weapon_supply = WeaponSupply()
+                all_sprites.add(weapon_supply)
+                weapon_supplies.add(weapon_supply)
 
         keys = pygame.key.get_pressed()
         player.update(keys)
@@ -266,6 +305,11 @@ def main_game():
             lives -= 1
             if player.lives <= 0:
                 game_over(score)
+
+        supply_hits = pygame.sprite.spritecollide(player, weapon_supplies, True)
+        for supply in supply_hits:
+            player.bullet_count += 1
+
 
         # Check if the player has reached the score requirement for the next level
         if score >= level * level_score_requirement and level < LEVELS:
@@ -292,6 +336,7 @@ def main_game():
         screen.blit(level_text, (WIDTH // 2 - 50, 10))
 
         pygame.display.flip()
+
 def main_menu():
     running = True
     while running:
@@ -327,7 +372,6 @@ def main_menu():
                 elif settings_btn.collidepoint(mouse_pos):
                     print("Settings button clicked")
                 elif exit_btn.collidepoint(mouse_pos):
-
                     running = False
 
         pygame.display.flip()
@@ -342,3 +386,4 @@ enemies = pygame.sprite.Group()
 
 # Start the main menu
 main_menu()
+
