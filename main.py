@@ -301,8 +301,8 @@ def main_game():
     pygame.time.set_timer(enemy_spawn_event, 1000)
     pygame.time.set_timer(alien_ship_spawn_event, 3000)
 
-    weapon_supply_event = pygame.USEREVENT + 2
-    pygame.time.set_timer(weapon_supply_event, 5000)  # Adjust the time as needed
+    weapon_supply_event = pygame.USEREVENT + 3
+    pygame.time.set_timer(weapon_supply_event, 3000)  # Adjust the time as needed
 
     running = True
     while running:
