@@ -1,6 +1,7 @@
 import pygame
 import sys
 import random
+import math
 
 # Initialize Pygame here
 pygame.init()
@@ -19,7 +20,7 @@ YELLOW = (255, 255, 0)
 # Load background music
 pygame.mixer.music.load("game.mp3")
 pygame.mixer.music.play(-1)
-pygame.mixer.music.set_volume(0.3)# -1 means the music will loop indefinitely
+pygame.mixer.music.set_volume(0.3)  # -1 means the music will loop indefinitely
 
 # Load explosion sfx
 explosion_sound = pygame.mixer.Sound("explosion.mp3")
@@ -32,6 +33,14 @@ shooting_sound.set_volume(0.2)
 # Load explosion image
 explosion_image = pygame.image.load("explosion.png").convert_alpha()
 explosion_image = pygame.transform.scale(explosion_image, (150, 150))  # Adjust the size as needed
+
+# Load images for player and enemies
+player_image = pygame.image.load("player.png").convert_alpha()
+player_image = pygame.transform.scale(player_image, (50, 50))
+enemy_image = pygame.image.load("enemy.png").convert_alpha()
+enemy_image = pygame.transform.scale(enemy_image, (100, 100))
+alien_ship_image = pygame.image.load("alien_ship.png").convert_alpha()
+alien_ship_image = pygame.transform.scale(alien_ship_image, (100, 100))
 
 # Font
 font = pygame.font.Font(None, 74)
@@ -66,6 +75,7 @@ def create_button(text, center_x, center_y):
     screen.blit(text_render, rect)
     return rect
 
+
 player_image = pygame.image.load("player.png").convert_alpha()
 player_image = pygame.transform.scale(player_image, (50, 50))
 enemy_image = pygame.image.load("enemy.png").convert_alpha()
@@ -81,15 +91,17 @@ class Player(pygame.sprite.Sprite):
         super().__init__()
         self.image = player_image
         self.rect = self.image.get_rect(midbottom=(WIDTH // 2, HEIGHT - 10))
-        self.speed = 1
+        self.speed = 2  # Adjust this value to change the player's ship speed
         self.lives = 3
         self.bullet_count = 1
 
     def update(self, keys):
-        if keys[pygame.K_LEFT]:  # Allow continuous movement to the left
+        # Move the player's ship based on the keys pressed
+        if keys[pygame.K_LEFT]:
             self.rect.x -= self.speed
-        if keys[pygame.K_RIGHT]:  # Allow continuous movement to the right
+        if keys[pygame.K_RIGHT]:
             self.rect.x += self.speed
+        
         # Ensure the player stays within the screen boundaries
         self.rect.x = max(0, min(self.rect.x, WIDTH - self.rect.width))
 
@@ -116,11 +128,35 @@ class Enemy(pygame.sprite.Sprite):
         super().__init__()
         self.image = enemy_image
         self.rect = self.image.get_rect(topleft=(x, y))
-        self.speed = 0.6  # Adjust the speed of the enemies
+        self.speed_y = random.uniform(0.5, 1.0)  # Adjust the vertical speed of the enemies
+        self.amplitude = random.uniform(30, 80)  # Amplitude of the sine wave
+        self.frequency = random.uniform(0.01, 0.03)  # Frequency of the sine wave
+        self.start_x = x  # Store the initial x position
+        self.time = 0  # Time counter for the sine wave
 
     def update(self):
-        self.rect.y += self.speed
-        if self.rect.top > HEIGHT:  # Check if the enemy is off the screen
+        self.rect.y += self.speed_y
+        self.rect.x = self.start_x + self.amplitude * math.sin(self.frequency * self.time)
+        self.time += 1
+        if self.rect.top > HEIGHT or self.rect.right < 0 or self.rect.left > WIDTH:  # Check if the enemy is off the screen
+            self.kill()
+
+class AlienShip(pygame.sprite.Sprite):
+    def __init__(self, x, y):
+        super().__init__()
+        self.image = alien_ship_image
+        self.rect = self.image.get_rect(topleft=(x, y))
+        self.speed_y = random.uniform(0.7, 1.5)  # Adjust the vertical speed of the alien ships
+        self.amplitude = random.uniform(50, 100)  # Amplitude of the sine wave
+        self.frequency = random.uniform(0.01, 0.05)  # Frequency of the sine wave
+        self.start_x = x  # Store the initial x position
+        self.time = 0  # Time counter for the sine wave
+
+    def update(self):
+        self.rect.y += self.speed_y
+        self.rect.x = self.start_x + self.amplitude * math.sin(self.frequency * self.time)
+        self.time += 1
+        if self.rect.top > HEIGHT or self.rect.right < 0 or self.rect.left > WIDTH:  # Check if the alien ship is off the screen
             self.kill()
 
 class Bullet(pygame.sprite.Sprite):
@@ -241,11 +277,13 @@ def pause_menu():
         pygame.display.flip()
 
 def main_game():
-    global all_sprites, bullets, enemies, explosions, weapon_supplies
+    global all_sprites, bullets, enemies, alien_ships, explosions, weapon_supplies
+
     # Re-initialize sprite groups
     all_sprites = pygame.sprite.Group()
     bullets = pygame.sprite.Group()
     enemies = pygame.sprite.Group()
+    alien_ships = pygame.sprite.Group()
     explosions = pygame.sprite.Group()
     weapon_supplies = pygame.sprite.Group()
     
@@ -259,7 +297,9 @@ def main_game():
     lives = player.lives
 
     enemy_spawn_event = pygame.USEREVENT + 1
+    alien_ship_spawn_event = pygame.USEREVENT + 2
     pygame.time.set_timer(enemy_spawn_event, 1000)
+    pygame.time.set_timer(alien_ship_spawn_event, 3000)
 
     weapon_supply_event = pygame.USEREVENT + 2
     pygame.time.set_timer(weapon_supply_event, 5000)  # Adjust the time as needed
@@ -279,10 +319,17 @@ def main_game():
                 enemy = Enemy(random.randint(0, WIDTH - 40), -40)
                 all_sprites.add(enemy)
                 enemies.add(enemy)
+
+            elif event.type == alien_ship_spawn_event:
+                alien_ship = AlienShip(random.randint(0, WIDTH - 40), -40)
+                all_sprites.add(alien_ship)
+                alien_ships.add(alien_ship)
+
             elif event.type == weapon_supply_event:
                 weapon_supply = WeaponSupply()
                 all_sprites.add(weapon_supply)
                 weapon_supplies.add(weapon_supply)
+
 
         keys = pygame.key.get_pressed()
         player.update(keys)
@@ -299,8 +346,17 @@ def main_game():
             explosions.add(explosion)
             explosion_sound.play()
 
+        alien_hits = pygame.sprite.groupcollide(bullets, alien_ships, True, True)
+        for hit in alien_hits:
+            score += 2  # Alien ships give more points
+            explosion = Explosion(hit.rect.centerx, hit.rect.centery)
+            all_sprites.add(explosion)
+            explosions.add(explosion)
+            explosion_sound.play()
+
         enemy_hits = pygame.sprite.spritecollide(player, enemies, True)
-        if enemy_hits:
+        alien_ship_hits = pygame.sprite.spritecollide(player, alien_ships, True)
+        if enemy_hits or alien_ship_hits:
             player.lives -= 1
             lives -= 1
             if player.lives <= 0:
@@ -316,6 +372,7 @@ def main_game():
             level += 1
             # Adjust any level-specific parameters here, like enemy spawn rate
             pygame.time.set_timer(enemy_spawn_event, 1000 // level)
+            pygame.time.set_timer(alien_ship_spawn_event, 3000 // level)
 
         # Drawing
         screen.fill((0, 0, 0))
@@ -383,7 +440,7 @@ def main_menu():
 all_sprites = pygame.sprite.Group()
 bullets = pygame.sprite.Group()
 enemies = pygame.sprite.Group()
+alien_ships = pygame.sprite.Group()
 
 # Start the main menu
 main_menu()
-
