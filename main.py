@@ -148,6 +148,7 @@ class Explosion(pygame.sprite.Sprite):
         if self.timer <= 0:
             self.kill()
 
+
 class WeaponSupply(pygame.sprite.Sprite):
     def __init__(self):
         super().__init__()
@@ -159,6 +160,7 @@ class WeaponSupply(pygame.sprite.Sprite):
         self.rect.y += self.speed
         if self.rect.top > HEIGHT:
             self.kill()
+
 
 # def game_over():
 #     game_over_text = font.render("Game Over", True, WHITE)
@@ -308,6 +310,7 @@ def main_game():
         for supply in supply_hits:
             player.bullet_count += 1
 
+
         # Check if the player has reached the score requirement for the next level
         if score >= level * level_score_requirement and level < LEVELS:
             level += 1
@@ -383,3 +386,4 @@ enemies = pygame.sprite.Group()
 
 # Start the main menu
 main_menu()
+
