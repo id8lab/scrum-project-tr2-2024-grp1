@@ -39,7 +39,7 @@ player_image = pygame.image.load("player.png").convert_alpha()
 player_image = pygame.transform.scale(player_image, (50, 50))
 enemy_image = pygame.image.load("enemy.png").convert_alpha()
 enemy_image = pygame.transform.scale(enemy_image, (100, 100))
-alien_ship_image = pygame.image.load("alien_ship.png").convert_alpha()
+alien_ship_image = pygame.image.load("alien_ships.png").convert_alpha()
 alien_ship_image = pygame.transform.scale(alien_ship_image, (100, 100))
 
 # Font
