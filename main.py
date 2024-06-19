@@ -3,7 +3,7 @@ import sys
 import random
 import math
 
-# Initialize Pygame here
+# Initialize Pygame her
 pygame.init()
 
 # Screen dimensions
@@ -52,7 +52,7 @@ class Star:
     def __init__(self):
         self.x = random.randint(0, WIDTH)
         self.y = random.randint(0, HEIGHT)
-        self.speed = random.uniform(1, 3)
+        self.speed = random.uniform(1, 1)
         self.size = random.randint(1, 3)
 
     def move(self):
@@ -91,7 +91,7 @@ class Player(pygame.sprite.Sprite):
         super().__init__()
         self.image = player_image
         self.rect = self.image.get_rect(midbottom=(WIDTH // 2, HEIGHT - 10))
-        self.speed = 2  # Adjust this value to change the player's ship speed
+        self.speed = 1  # Adjust this value to change the player's ship speed
         self.lives = 3
         self.bullet_count = 1
 
