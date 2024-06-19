@@ -290,7 +290,7 @@ def main_game():
     player = Player()
     all_sprites.add(player)
 
-    LEVELS = 3  # Total number of levels
+    LEVELS = 100  # Total number of levels
     level = 1   # Current level
     level_score_requirement = 10  
     score = 0
@@ -371,8 +371,8 @@ def main_game():
         if score >= level * level_score_requirement and level < LEVELS:
             level += 1
             # Adjust any level-specific parameters here, like enemy spawn rate
-            pygame.time.set_timer(enemy_spawn_event, 1000 // level)
-            pygame.time.set_timer(alien_ship_spawn_event, 3000 // level)
+            pygame.time.set_timer(enemy_spawn_event, max(200, 1000 - (level * 5)))
+            pygame.time.set_timer(alien_ship_spawn_event, max(1000, 3000 - (level * 10)))
 
         # Drawing
         screen.fill((0, 0, 0))
