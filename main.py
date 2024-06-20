@@ -3,7 +3,7 @@ import sys
 import random
 import math
 
-# Initialize Pygame here
+# Initialize Pygame her
 pygame.init()
 
 # Screen dimensions
@@ -39,7 +39,7 @@ player_image = pygame.image.load("player.png").convert_alpha()
 player_image = pygame.transform.scale(player_image, (50, 50))
 enemy_image = pygame.image.load("enemy.png").convert_alpha()
 enemy_image = pygame.transform.scale(enemy_image, (100, 100))
-alien_ship_image = pygame.image.load("alien_ship.png").convert_alpha()
+alien_ship_image = pygame.image.load("alien_ships.png").convert_alpha()
 alien_ship_image = pygame.transform.scale(alien_ship_image, (100, 100))
 
 # Font
@@ -52,7 +52,7 @@ class Star:
     def __init__(self):
         self.x = random.randint(0, WIDTH)
         self.y = random.randint(0, HEIGHT)
-        self.speed = random.uniform(1, 3)
+        self.speed = random.uniform(1, 1)
         self.size = random.randint(1, 3)
 
     def move(self):
@@ -197,6 +197,41 @@ class WeaponSupply(pygame.sprite.Sprite):
         if self.rect.top > HEIGHT:
             self.kill()
 
+class CircularEnemy(pygame.sprite.Sprite):
+    def __init__(self, x, y):
+        super().__init__()
+        self.image = enemy_image
+        self.rect = self.image.get_rect(topleft=(x, y))
+        self.speed_y = random.uniform(0.5, 1.0)  # Vertical speed
+        self.radius = random.uniform(30, 80)  # Radius of the circular path
+        self.angle = 0  # Initial angle
+
+    def update(self):
+        self.rect.y += self.speed_y
+        self.rect.x += self.radius * math.cos(self.angle)
+        self.angle += 0.05  # Adjust the angle increment for smoother or faster rotation
+
+        if self.rect.top > HEIGHT or self.rect.right < 0 or self.rect.left > WIDTH:
+            self.kill()
+
+class HorizontalEnemy(pygame.sprite.Sprite):
+    def __init__(self, x, y, direction=1):
+        super().__init__()
+        self.image = enemy_image
+        self.rect = self.image.get_rect(topleft=(x, y))
+        self.speed_x = direction * random.uniform(0.5, 1.0)  # Slower horizontal speed
+        self.direction = direction  # Direction of movement
+        self.start_y = y  # Store the initial y position
+
+    def update(self):
+        self.rect.x += self.speed_x
+
+        # Keep the y position constant
+        self.rect.y = self.start_y
+
+        if self.rect.left > WIDTH or self.rect.right < 0:
+            self.kill()
+
 
 # def game_over():
 #     game_over_text = font.render("Game Over", True, WHITE)
@@ -277,13 +312,15 @@ def pause_menu():
         pygame.display.flip()
 
 def main_game():
-    global all_sprites, bullets, enemies, alien_ships, explosions, weapon_supplies
+    global all_sprites, bullets, enemies, alien_ships, circular_enemies, horizontal_enemies, explosions, weapon_supplies
 
     # Re-initialize sprite groups
     all_sprites = pygame.sprite.Group()
     bullets = pygame.sprite.Group()
     enemies = pygame.sprite.Group()
     alien_ships = pygame.sprite.Group()
+    circular_enemies = pygame.sprite.Group()
+    horizontal_enemies = pygame.sprite.Group()
     explosions = pygame.sprite.Group()
     weapon_supplies = pygame.sprite.Group()
     
@@ -298,11 +335,16 @@ def main_game():
 
     enemy_spawn_event = pygame.USEREVENT + 1
     alien_ship_spawn_event = pygame.USEREVENT + 2
+    circular_enemy_spawn_event = pygame.USEREVENT + 4
+    horizontal_enemy_spawn_event = pygame.USEREVENT + 5
+
     pygame.time.set_timer(enemy_spawn_event, 1000)
     pygame.time.set_timer(alien_ship_spawn_event, 3000)
+    pygame.time.set_timer(circular_enemy_spawn_event, 2000)
+    pygame.time.set_timer(horizontal_enemy_spawn_event, 2500)
 
-    weapon_supply_event = pygame.USEREVENT + 2
-    pygame.time.set_timer(weapon_supply_event, 5000)  # Adjust the time as needed
+    weapon_supply_event = pygame.USEREVENT + 3
+    pygame.time.set_timer(weapon_supply_event, 3000)  # Adjust the time as needed
 
     running = True
     while running:
@@ -325,11 +367,23 @@ def main_game():
                 all_sprites.add(alien_ship)
                 alien_ships.add(alien_ship)
 
+            elif event.type == circular_enemy_spawn_event:
+                circular_enemy = CircularEnemy(random.randint(0, WIDTH - 40), -40)
+                all_sprites.add(circular_enemy)
+                circular_enemies.add(circular_enemy)
+
+            elif event.type == horizontal_enemy_spawn_event:
+                side = random.choice(["left", "right"])
+                x_pos = -40 if side == "left" else WIDTH + 40
+                direction = 1 if side == "left" else -1
+                horizontal_enemy = HorizontalEnemy(x_pos, random.randint(0, HEIGHT - 40), direction)
+                all_sprites.add(horizontal_enemy)
+                horizontal_enemies.add(horizontal_enemy)
+
             elif event.type == weapon_supply_event:
                 weapon_supply = WeaponSupply()
                 all_sprites.add(weapon_supply)
                 weapon_supplies.add(weapon_supply)
-
 
         keys = pygame.key.get_pressed()
         player.update(keys)
@@ -354,9 +408,28 @@ def main_game():
             explosions.add(explosion)
             explosion_sound.play()
 
+        circular_hits = pygame.sprite.groupcollide(bullets, circular_enemies, True, True)
+        for hit in circular_hits:
+            score += 3  # Circular enemies give more points
+            explosion = Explosion(hit.rect.centerx, hit.rect.centery)
+            all_sprites.add(explosion)
+            explosions.add(explosion)
+            explosion_sound.play()
+
+        horizontal_hits = pygame.sprite.groupcollide(bullets, horizontal_enemies, True, True)
+        for hit in horizontal_hits:
+            score += 3  # Horizontal enemies give more points
+            explosion = Explosion(hit.rect.centerx, hit.rect.centery)
+            all_sprites.add(explosion)
+            explosions.add(explosion)
+            explosion_sound.play()
+
         enemy_hits = pygame.sprite.spritecollide(player, enemies, True)
         alien_ship_hits = pygame.sprite.spritecollide(player, alien_ships, True)
-        if enemy_hits or alien_ship_hits:
+        circular_enemy_hits = pygame.sprite.spritecollide(player, circular_enemies, True)
+        horizontal_enemy_hits = pygame.sprite.spritecollide(player, horizontal_enemies, True)
+
+        if enemy_hits or alien_ship_hits or circular_enemy_hits or horizontal_enemy_hits:
             player.lives -= 1
             lives -= 1
             if player.lives <= 0:
@@ -365,7 +438,6 @@ def main_game():
         supply_hits = pygame.sprite.spritecollide(player, weapon_supplies, True)
         for supply in supply_hits:
             player.bullet_count += 1
-
 
         # Check if the player has reached the score requirement for the next level
         if score >= level * level_score_requirement and level < LEVELS:
@@ -393,6 +465,7 @@ def main_game():
         screen.blit(level_text, (WIDTH // 2 - 50, 10))
 
         pygame.display.flip()
+
 
 def main_menu():
     running = True
