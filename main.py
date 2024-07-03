@@ -56,6 +56,14 @@ font = pygame.font.Font(None, 74)
 button_font = pygame.font.Font(None, 50)
 score_font = pygame.font.Font(None, 36)
 
+# Sprite groups
+all_sprites = pygame.sprite.Group()
+enemies = pygame.sprite.Group()
+
+# Game constants
+ENEMY_COUNT = 20
+enemy_spawned = False
+
 # Star class for the animated background
 class Star:
     def __init__(self):
@@ -229,37 +237,84 @@ class Enemy(pygame.sprite.Sprite):
     def __init__(self, x, y):
         super().__init__()
         self.image = enemy_image
-        self.rect = self.image.get_rect(topleft=(x, y))
-        self.speed_y = random.uniform(0.5, 1.0)  # Adjust the vertical speed of the enemies
-        self.amplitude = random.uniform(30, 80)  # Amplitude of the sine wave
-        self.frequency = random.uniform(0.01, 0.03)  # Frequency of the sine wave
-        self.start_x = x  # Store the initial x position
-        self.time = 0  # Time counter for the sine wave
+        self.rect = self.image.get_rect(topleft=(x, 0))  # Start at the top of the screen
+        self.target_y = y  # The designated position
+        self.speed_y = random.uniform(0.5, 1.0)
+        self.speed_x = random.uniform(0.8, 1.5)
+        self.amplitude = random.uniform(30, 80)
+        self.frequency = random.uniform(0.01, 0.03)
+        self.start_x = x
+        self.time = 0
+        self.oscillate = random.choice([True, False])
+        self.horizontal = random.choice([True, False])
+        self.oscillate_start_y = random.randint(HEIGHT // 4, HEIGHT // 2)
+        self.dropping = True  # Initial state is dropping down
 
     def update(self):
-        self.rect.y += self.speed_y
-        self.rect.x = self.start_x + self.amplitude * math.sin(self.frequency * self.time)
-        self.time += 1
-        if self.rect.top > HEIGHT or self.rect.right < 0 or self.rect.left > WIDTH:  # Check if the enemy is off the screen
-            self.kill()
+        if self.dropping:
+            self.rect.y += self.speed_y
+            if self.rect.y >= self.target_y:
+                self.rect.y = self.target_y
+                self.dropping = False  # Stop dropping and start normal behavior
+        else:
+            if self.horizontal:
+                self.rect.x += self.speed_x
+                if self.rect.left <= 0 or self.rect.right >= WIDTH:
+                    self.speed_x *= -1
+            else:
+                if self.rect.y < self.oscillate_start_y:
+                    self.rect.y += self.speed_y
+                else:
+                    if self.oscillate:
+                        new_x = self.start_x + self.amplitude * math.sin(self.frequency * self.time)
+                        if abs(new_x - self.rect.x) > 1:  # Ensure noticeable movement
+                            self.rect.x = new_x
+                    self.time += 1
+
+                if self.rect.top > HEIGHT or self.rect.right < 0 or self.rect.left > WIDTH:
+                    self.kill()
+
 
 class AlienShip(pygame.sprite.Sprite):
     def __init__(self, x, y):
         super().__init__()
         self.image = alien_ship_image
-        self.rect = self.image.get_rect(topleft=(x, y))
-        self.speed_y = random.uniform(0.7, 1.5)  # Adjust the vertical speed of the alien ships
-        self.amplitude = random.uniform(50, 100)  # Amplitude of the sine wave
-        self.frequency = random.uniform(0.01, 0.05)  # Frequency of the sine wave
-        self.start_x = x  # Store the initial x position
-        self.time = 0  # Time counter for the sine wave
+        self.rect = self.image.get_rect(topleft=(x, 0))  # Start at the top of the screen
+        self.target_y = y  # The designated position
+        self.speed_y = random.uniform(0.7, 1.5)
+        self.speed_x = random.uniform(0.8, 1.5)
+        self.amplitude = random.uniform(50, 100)
+        self.frequency = random.uniform(0.01, 0.05)
+        self.start_x = x
+        self.time = 0
+        self.oscillate = random.choice([True, False])
+        self.horizontal = random.choice([True, False])
+        self.oscillate_start_y = random.randint(HEIGHT // 4, HEIGHT // 2)
+        self.dropping = True  # Initial state is dropping down
 
     def update(self):
-        self.rect.y += self.speed_y
-        self.rect.x = self.start_x + self.amplitude * math.sin(self.frequency * self.time)
-        self.time += 1
-        if self.rect.top > HEIGHT or self.rect.right < 0 or self.rect.left > WIDTH:  # Check if the alien ship is off the screen
-            self.kill()
+        if self.dropping:
+            self.rect.y += self.speed_y
+            if self.rect.y >= self.target_y:
+                self.rect.y = self.target_y
+                self.dropping = False  # Stop dropping and start normal behavior
+        else:
+            if self.horizontal:
+                self.rect.x += self.speed_x
+                if self.rect.left <= 0 or self.rect.right >= WIDTH:
+                    self.speed_x *= -1
+            else:
+                if self.rect.y < self.oscillate_start_y:
+                    self.rect.y += self.speed_y
+                else:
+                    if self.oscillate:
+                        new_x = self.start_x + self.amplitude * math.sin(self.frequency * self.time)
+                        if abs(new_x - self.rect.x) > 1:  # Ensure noticeable movement
+                            self.rect.x = new_x
+                    self.time += 1
+
+                if self.rect.top > HEIGHT or self.rect.right < 0 or self.rect.left > WIDTH:
+                    self.kill()
 
 class Bullet(pygame.sprite.Sprite):
     def __init__(self, x, y):
@@ -378,17 +433,17 @@ def pause_menu():
 
         pygame.display.flip()
 
+
 def main_game():
     global all_sprites, bullets, enemies, alien_ships, explosions, weapon_supplies
 
-    # Re-initialize sprite groups
     all_sprites = pygame.sprite.Group()
     bullets = pygame.sprite.Group()
     enemies = pygame.sprite.Group()
     alien_ships = pygame.sprite.Group()
     explosions = pygame.sprite.Group()
     weapon_supplies = pygame.sprite.Group()
-    
+
     player = Player()
     all_sprites.add(player)
 
@@ -398,10 +453,9 @@ def main_game():
     score = 0
     lives = player.lives
 
-    enemy_spawn_event = pygame.USEREVENT + 1
-    alien_ship_spawn_event = pygame.USEREVENT + 2
-    pygame.time.set_timer(enemy_spawn_event, 1000)
-    pygame.time.set_timer(alien_ship_spawn_event, 3000)
+    MAX_ENEMIES_PER_WAVE = 20
+    enemies_spawned = 0
+    enemies_killed = 0
 
     weapon_supply_event = pygame.USEREVENT + 3
     pygame.time.set_timer(weapon_supply_event, 3000)  # Adjust the time as needed
@@ -417,21 +471,10 @@ def main_game():
                     player.shoot()
                 elif event.key == pygame.K_ESCAPE:
                     pause_menu()
-            elif event.type == enemy_spawn_event:
-                enemy = Enemy(random.randint(0, WIDTH - 40), -40)
-                all_sprites.add(enemy)
-                enemies.add(enemy)
-
-            elif event.type == alien_ship_spawn_event:
-                alien_ship = AlienShip(random.randint(0, WIDTH - 40), -40)
-                all_sprites.add(alien_ship)
-                alien_ships.add(alien_ship)
-
             elif event.type == weapon_supply_event:
                 weapon_supply = WeaponSupply()
                 all_sprites.add(weapon_supply)
                 weapon_supplies.add(weapon_supply)
-
 
         keys = pygame.key.get_pressed()
         player.update(keys)
@@ -440,9 +483,23 @@ def main_game():
             if sprite != player:
                 sprite.update()
 
+        # Spawn enemies if needed
+        if enemies_spawned < MAX_ENEMIES_PER_WAVE and len(enemies) + len(alien_ships) < MAX_ENEMIES_PER_WAVE:
+            enemy_type = random.choice(['enemy', 'alien'])
+            if enemy_type == 'enemy':
+                enemy = Enemy(random.randint(0, WIDTH - 40), random.randint(-40, HEIGHT // 2 - 40))
+                all_sprites.add(enemy)
+                enemies.add(enemy)
+            else:
+                alien_ship = AlienShip(random.randint(0, WIDTH - 40), random.randint(-40, HEIGHT // 2 - 40))
+                all_sprites.add(alien_ship)
+                alien_ships.add(alien_ship)
+            enemies_spawned += 1
+
         hits = pygame.sprite.groupcollide(bullets, enemies, True, True)
         for hit in hits:
             score += 1
+            enemies_killed += 1
             explosion = Explosion(hit.rect.centerx, hit.rect.centery)
             all_sprites.add(explosion)
             explosions.add(explosion)
@@ -451,6 +508,7 @@ def main_game():
         alien_hits = pygame.sprite.groupcollide(bullets, alien_ships, True, True)
         for hit in alien_hits:
             score += 2  # Alien ships give more points
+            enemies_killed += 1
             explosion = Explosion(hit.rect.centerx, hit.rect.centery)
             all_sprites.add(explosion)
             explosions.add(explosion)
@@ -463,25 +521,26 @@ def main_game():
             lives -= 1
             if player.lives <= 0:
                 game_over(score)
-
+ 
         supply_hits = pygame.sprite.spritecollide(player, weapon_supplies, True)
         for supply in supply_hits:
             player.bullet_count += 1
 
-
-        # Check if the player has reached the score requirement for the next level
-        if score >= level * level_score_requirement and level < LEVELS:
+        # Check if all enemies have been killed to spawn the next wave
+        if enemies_killed >= MAX_ENEMIES_PER_WAVE:
+            enemies_spawned = 0
+            enemies_killed = 0
             level += 1
-            # Adjust any level-specific parameters here, like enemy spawn rate
-            pygame.time.set_timer(enemy_spawn_event, 1000 // level)
-            pygame.time.set_timer(alien_ship_spawn_event, 3000 // level)
+            # if level > LEVELS:
+            #     running = False
+            #     print("Congratulations! You've completed the game!")
 
         # Drawing
         screen.fill((0, 0, 0))
         for star in stars:
             star.move()
             star.draw(screen)
-        
+
         all_sprites.draw(screen)
 
         score_text = score_font.render(f"Score: {score}", True, WHITE)
@@ -495,6 +554,8 @@ def main_game():
         screen.blit(level_text, (WIDTH // 2 - 50, 10))
 
         pygame.display.flip()
+
+
 
 def main_menu():
     running = True
