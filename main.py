@@ -39,6 +39,10 @@ player_image = pygame.image.load("player.png").convert_alpha()
 player_image = pygame.transform.scale(player_image, (50, 50))
 enemy_image = pygame.image.load("enemy.png").convert_alpha()
 enemy_image = pygame.transform.scale(enemy_image, (100, 100))
+# Load enemy boss image
+boss_image = pygame.image.load("enemyboss.png").convert_alpha()
+boss_image = pygame.transform.scale(boss_image, (200, 200))  # Adjust the size as needed
+
 alien_ship_image = pygame.image.load("alien_ships.png").convert_alpha()
 alien_ship_image = pygame.transform.scale(alien_ship_image, (100, 100))
 
@@ -80,6 +84,9 @@ player_image = pygame.image.load("player.png").convert_alpha()
 player_image = pygame.transform.scale(player_image, (50, 50))
 enemy_image = pygame.image.load("enemy.png").convert_alpha()
 enemy_image = pygame.transform.scale(enemy_image, (100, 100))
+boss_image = pygame.image.load("enemyboss.png").convert_alpha()
+boss_image = pygame.transform.scale(boss_image, (200, 200))  # Adjust the size as needed
+
 
 # Load weapon supply image
 weapon_supply_image = pygame.image.load("weapon_supply.png").convert_alpha()
@@ -134,12 +141,58 @@ class Enemy(pygame.sprite.Sprite):
         self.start_x = x  # Store the initial x position
         self.time = 0  # Time counter for the sine wave
 
+class EnemyBoss(pygame.sprite.Sprite):
+    def __init__(self, x, y):
+        super().__init__()
+        self.image = boss_image
+        self.rect = self.image.get_rect(topleft=(x, y))
+        self.speed_y = random.uniform(0.5, 1.0)
+        self.amplitude = random.uniform(30, 80)
+        self.frequency = random.uniform(0.01, 0.03)
+        self.start_x = x
+        self.time = 0
+        self.shoot_delay = 1000  # Delay between each shot in milliseconds
+        self.last_shot = pygame.time.get_ticks()
+        self.health = 10
+
     def update(self):
         self.rect.y += self.speed_y
+        if self.rect.top >= HEIGHT // 4:
+            self.speed_y = 0  # Stop moving down once it reaches a certain point
+
         self.rect.x = self.start_x + self.amplitude * math.sin(self.frequency * self.time)
         self.time += 1
-        if self.rect.top > HEIGHT or self.rect.right < 0 or self.rect.left > WIDTH:  # Check if the enemy is off the screen
+
+        now = pygame.time.get_ticks()
+        if now - self.last_shot > self.shoot_delay:
+            self.last_shot = now
+            self.shoot()
+
+    def shoot(self):
+        boss_bullet = BossBullet(self.rect.centerx, self.rect.bottom)
+        all_sprites.add(boss_bullet)
+        boss_bullets.add(boss_bullet)
+
+    def hit(self):
+        self.health -= 1
+        if self.health <= 0:
             self.kill()
+            return True
+        return False
+
+class BossBullet(pygame.sprite.Sprite):
+    def __init__(self, x, y):
+        super().__init__()
+        self.image = pygame.Surface((10, 30))
+        self.image.fill(RED)
+        self.rect = self.image.get_rect(midtop=(x, y))
+        self.speed_y = 5
+
+    def update(self):
+        self.rect.y += self.speed_y
+        if self.rect.top > HEIGHT:
+            self.kill()
+
 
 class AlienShip(pygame.sprite.Sprite):
     def __init__(self, x, y):
@@ -277,32 +330,33 @@ def pause_menu():
         pygame.display.flip()
 
 def main_game():
-    global all_sprites, bullets, enemies, alien_ships, explosions, weapon_supplies
+    global all_sprites, bullets, enemies, alien_ships, explosions, weapon_supplies, boss_bullets
 
-    # Re-initialize sprite groups
     all_sprites = pygame.sprite.Group()
     bullets = pygame.sprite.Group()
     enemies = pygame.sprite.Group()
     alien_ships = pygame.sprite.Group()
     explosions = pygame.sprite.Group()
     weapon_supplies = pygame.sprite.Group()
-    
+    boss_bullets = pygame.sprite.Group()
+
     player = Player()
     all_sprites.add(player)
 
-    LEVELS = 100  # Total number of levels
+    LEVELS = 3  # Total number of levels
     level = 1   # Current level
     level_score_requirement = 10  
     score = 0
     lives = player.lives
 
-    enemy_spawn_event = pygame.USEREVENT + 1
-    alien_ship_spawn_event = pygame.USEREVENT + 2
-    pygame.time.set_timer(enemy_spawn_event, 1000)
-    pygame.time.set_timer(alien_ship_spawn_event, 3000)
+    MAX_ENEMIES_PER_WAVE = 20
+    enemies_spawned = 0
+    enemies_killed = 0
 
     weapon_supply_event = pygame.USEREVENT + 3
     pygame.time.set_timer(weapon_supply_event, 3000)  # Adjust the time as needed
+
+    boss_spawned = False
 
     running = True
     while running:
@@ -315,21 +369,10 @@ def main_game():
                     player.shoot()
                 elif event.key == pygame.K_ESCAPE:
                     pause_menu()
-            elif event.type == enemy_spawn_event:
-                enemy = Enemy(random.randint(0, WIDTH - 40), -40)
-                all_sprites.add(enemy)
-                enemies.add(enemy)
-
-            elif event.type == alien_ship_spawn_event:
-                alien_ship = AlienShip(random.randint(0, WIDTH - 40), -40)
-                all_sprites.add(alien_ship)
-                alien_ships.add(alien_ship)
-
             elif event.type == weapon_supply_event:
                 weapon_supply = WeaponSupply()
                 all_sprites.add(weapon_supply)
                 weapon_supplies.add(weapon_supply)
-
 
         keys = pygame.key.get_pressed()
         player.update(keys)
@@ -338,9 +381,23 @@ def main_game():
             if sprite != player:
                 sprite.update()
 
+        # Spawn enemies if needed
+        if enemies_spawned < MAX_ENEMIES_PER_WAVE and len(enemies) + len(alien_ships) < MAX_ENEMIES_PER_WAVE:
+            enemy_type = random.choice(['enemy', 'alien'])
+            if enemy_type == 'enemy':
+                enemy = Enemy(random.randint(0, WIDTH - 40), random.randint(-40, HEIGHT // 2 - 40))
+                all_sprites.add(enemy)
+                enemies.add(enemy)
+            else:
+                alien_ship = AlienShip(random.randint(0, WIDTH - 40), random.randint(-40, HEIGHT // 2 - 40))
+                all_sprites.add(alien_ship)
+                alien_ships.add(alien_ship)
+            enemies_spawned += 1
+
         hits = pygame.sprite.groupcollide(bullets, enemies, True, True)
         for hit in hits:
             score += 1
+            enemies_killed += 1
             explosion = Explosion(hit.rect.centerx, hit.rect.centery)
             all_sprites.add(explosion)
             explosions.add(explosion)
@@ -349,6 +406,7 @@ def main_game():
         alien_hits = pygame.sprite.groupcollide(bullets, alien_ships, True, True)
         for hit in alien_hits:
             score += 2  # Alien ships give more points
+            enemies_killed += 1
             explosion = Explosion(hit.rect.centerx, hit.rect.centery)
             all_sprites.add(explosion)
             explosions.add(explosion)
@@ -361,25 +419,37 @@ def main_game():
             lives -= 1
             if player.lives <= 0:
                 game_over(score)
-
+ 
         supply_hits = pygame.sprite.spritecollide(player, weapon_supplies, True)
         for supply in supply_hits:
             player.bullet_count += 1
 
+        boss_hits = pygame.sprite.spritecollide(player, boss_bullets, True)
+        if boss_hits:
+            player.lives -= 1
+            lives -= 1
+            if player.lives <= 0:
+                game_over(score)
 
-        # Check if the player has reached the score requirement for the next level
-        if score >= level * level_score_requirement and level < LEVELS:
+        # Spawn boss at the beginning of each level
+        if not boss_spawned:
+            boss = EnemyBoss(WIDTH // 2 - 100, -200)
+            all_sprites.add(boss)
+            boss_spawned = True
+
+        # Check if all enemies have been killed to spawn the next wave
+        if enemies_killed >= MAX_ENEMIES_PER_WAVE:
+            enemies_spawned = 0
+            enemies_killed = 0
             level += 1
-            # Adjust any level-specific parameters here, like enemy spawn rate
-            pygame.time.set_timer(enemy_spawn_event, max(200, 1000 - (level * 5)))
-            pygame.time.set_timer(alien_ship_spawn_event, max(1000, 3000 - (level * 10)))
+            boss_spawned = False  # Reset boss spawn flag for the new level
 
         # Drawing
         screen.fill((0, 0, 0))
         for star in stars:
             star.move()
             star.draw(screen)
-        
+
         all_sprites.draw(screen)
 
         score_text = score_font.render(f"Score: {score}", True, WHITE)
