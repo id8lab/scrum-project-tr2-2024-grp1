@@ -18,28 +18,37 @@ RED = (255, 0, 0)
 YELLOW = (255, 255, 0)
 
 # Load background music
-pygame.mixer.music.load("game.mp3")
+pygame.mixer.music.load("./assets/game.mp3")
 pygame.mixer.music.play(-1)
 pygame.mixer.music.set_volume(0.3)  # -1 means the music will loop indefinitely
 
 # Load explosion sfx
-explosion_sound = pygame.mixer.Sound("explosion.mp3")
+explosion_sound = pygame.mixer.Sound("./assets/explosion.mp3")
 explosion_sound.set_volume(1.0)
 
 # Load shooting sound
-shooting_sound = pygame.mixer.Sound("laser.mp3")
+shooting_sound = pygame.mixer.Sound("./assets/laser.mp3")
 shooting_sound.set_volume(0.2)
 
 # Load explosion image
-explosion_image = pygame.image.load("explosion.png").convert_alpha()
+explosion_image = pygame.image.load("./assets/explosion.png").convert_alpha()
 explosion_image = pygame.transform.scale(explosion_image, (150, 150))  # Adjust the size as needed
 
 # Load images for player and enemies
-player_image = pygame.image.load("player.png").convert_alpha()
-player_image = pygame.transform.scale(player_image, (50, 50))
-enemy_image = pygame.image.load("enemy.png").convert_alpha()
+# player_image = pygame.image.load("./assets/player.png").convert_alpha()
+# player_image = pygame.transform.scale(player_image, (50, 50))
+character_images = []
+for i in range(1, 6):
+    image = pygame.image.load(f"./assets/character_{i}.png").convert_alpha()
+    image = pygame.transform.scale(image, (50, 50))  # Adjust size as needed
+    character_images.append(image)
+
+# Set the default player image
+current_character_index = 0
+player_image = character_images[current_character_index]
+enemy_image = pygame.image.load("./assets/enemy.png").convert_alpha()
 enemy_image = pygame.transform.scale(enemy_image, (100, 100))
-alien_ship_image = pygame.image.load("alien_ships.png").convert_alpha()
+alien_ship_image = pygame.image.load("./assets/alien_ships.png").convert_alpha()
 alien_ship_image = pygame.transform.scale(alien_ship_image, (100, 100))
 
 # Font
@@ -76,14 +85,102 @@ def create_button(text, center_x, center_y):
     return rect
 
 
-player_image = pygame.image.load("player.png").convert_alpha()
-player_image = pygame.transform.scale(player_image, (50, 50))
-enemy_image = pygame.image.load("enemy.png").convert_alpha()
+# player_image = pygame.image.load("./assets/player.png").convert_alpha()
+# player_image = pygame.transform.scale(player_image, (50, 50))
+enemy_image = pygame.image.load("./assets/enemy.png").convert_alpha()
 enemy_image = pygame.transform.scale(enemy_image, (100, 100))
 
 # Load weapon supply image
-weapon_supply_image = pygame.image.load("weapon_supply.png").convert_alpha()
+weapon_supply_image = pygame.image.load("./assets/weapon_supply.png").convert_alpha()
 weapon_supply_image = pygame.transform.scale(weapon_supply_image, (80, 80))
+
+def draw_volume_bar(label, volume, pos_x, pos_y):
+    bar_width = 200
+    bar_height = 20
+    fill_width = int(volume * bar_width)
+    text_margin = 10  # Margin between the text and the bar
+    
+    # Draw label
+    label_text = score_font.render(label, True, WHITE)
+    label_rect = label_text.get_rect(midright=(pos_x - text_margin, pos_y))
+    screen.blit(label_text, label_rect)
+    
+    # Draw bar background
+    pygame.draw.rect(screen, GRAY, (pos_x, pos_y - bar_height//2, bar_width, bar_height))
+    # Draw filled part of the bar
+    pygame.draw.rect(screen, YELLOW, (pos_x, pos_y - bar_height//2, fill_width, bar_height))
+    # Draw bar border
+    pygame.draw.rect(screen, WHITE, (pos_x, pos_y - bar_height//2, bar_width, bar_height), 2)
+
+    return pygame.Rect(pos_x, pos_y - bar_height//2, bar_width, bar_height)
+
+
+def settings_menu():
+    global player_image, current_character_index
+
+    running = True
+    music_volume = pygame.mixer.music.get_volume()
+    sfx_volume = explosion_sound.get_volume()
+
+    while running:
+        screen.fill((0, 0, 0))
+
+        for star in stars:
+            star.move()
+            star.draw(screen)
+
+        settings_text = font.render("Settings", True, WHITE)
+        settings_rect = settings_text.get_rect(center=(WIDTH // 2, HEIGHT // 4))
+        screen.blit(settings_text, settings_rect)
+
+        music_bar = draw_volume_bar("Music Volume", music_volume, WIDTH // 2 + 100, HEIGHT // 2 - 60)
+        sfx_bar = draw_volume_bar("SFX Volume", sfx_volume, WIDTH // 2 + 100, HEIGHT // 2 + 20)
+
+        back_btn = create_button("Back", WIDTH // 2, HEIGHT // 2 + 300)
+
+        # Display "Choose Character" title
+        character_text = score_font.render("Choose Character:", True, WHITE)
+        character_rect = character_text.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 80))
+        screen.blit(character_text, character_rect)
+
+        # Display character options
+        character_y = HEIGHT // 2 + 120  # Position below the title
+        character_x_start = WIDTH // 2 - (len(character_images) * 50 + (len(character_images) - 1) * 10) // 2
+        character_margin = 10
+
+        character_rects = []
+        for i, image in enumerate(character_images):
+            character_x = character_x_start + i * (image.get_width() + character_margin)
+            rect = screen.blit(image, (character_x, character_y))
+            character_rects.append(rect)
+            if i == current_character_index:
+                pygame.draw.rect(screen, YELLOW, rect, 2)
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                mouse_pos = event.pos
+                if back_btn.collidepoint(mouse_pos):
+                    running = False
+                elif music_bar.collidepoint(mouse_pos):
+                    music_volume = (mouse_pos[0] - music_bar.x) / music_bar.width
+                    pygame.mixer.music.set_volume(music_volume)
+                elif sfx_bar.collidepoint(mouse_pos):
+                    sfx_volume = (mouse_pos[0] - sfx_bar.x) / sfx_bar.width
+                    explosion_sound.set_volume(sfx_volume)
+                    shooting_sound.set_volume(sfx_volume)
+                else:
+                    for i, rect in enumerate(character_rects):
+                        if rect.collidepoint(mouse_pos):
+                            current_character_index = i
+                            player_image = character_images[current_character_index]
+                            break
+
+        pygame.display.flip()
+
+
 
 # Game objects
 class Player(pygame.sprite.Sprite):
@@ -122,6 +219,11 @@ class Player(pygame.sprite.Sprite):
             all_sprites.add(bullet1, bullet2, bullet3)
             bullets.add(bullet1, bullet2, bullet3)
         shooting_sound.play()
+
+    def set_image(self, image):
+        self.image = image
+        self.rect = self.image.get_rect(midbottom=(WIDTH // 2, HEIGHT - 10))
+
 
 class Enemy(pygame.sprite.Sprite):
     def __init__(self, x, y):
@@ -427,7 +529,7 @@ def main_menu():
                 elif scores_btn.collidepoint(mouse_pos):
                     print("Scores button clicked")
                 elif settings_btn.collidepoint(mouse_pos):
-                    print("Settings button clicked")
+                    settings_menu()
                 elif exit_btn.collidepoint(mouse_pos):
                     running = False
 
