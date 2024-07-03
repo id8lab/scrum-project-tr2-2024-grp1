@@ -416,8 +416,14 @@ def high_scores_screen():
         screen.blit(title_text, title_rect)
 
         for i, score in enumerate(scores):
-            score_text = score_font.render(f"{i + 1}. {score}", True, WHITE)
-            score_rect = score_text.get_rect(center=(WIDTH // 2, HEIGHT // 2 + i * 40))
+            # Render the list number in yellow
+            number_text = score_font.render(f"{i + 1}.", True, YELLOW)
+            number_rect = number_text.get_rect(center=(WIDTH // 2 - 40, HEIGHT // 2 + i * 40))  # Adjust x position for space
+            screen.blit(number_text, number_rect)
+
+            # Render the score in white
+            score_text = score_font.render(f"{score}", True, WHITE)
+            score_rect = score_text.get_rect(center=(WIDTH // 2 + 40, HEIGHT // 2 + i * 40))  # Adjust x position for space
             screen.blit(score_text, score_rect)
 
         back_btn = create_button("Back", WIDTH // 2, HEIGHT - 100)
@@ -432,6 +438,7 @@ def high_scores_screen():
                     running = False
 
         pygame.display.flip()
+
 
 def pause_menu(current_score):
     save_score(current_score)
