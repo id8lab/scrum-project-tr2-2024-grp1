@@ -279,8 +279,9 @@ class Enemy(pygame.sprite.Sprite):
                             self.rect.x = new_x
                     self.time += 1
 
-                if self.rect.top > HEIGHT or self.rect.right < 0 or self.rect.left > WIDTH:
-                    self.kill()
+            # Ensure the enemy stays within the screen boundaries
+            self.rect.x = max(0, min(self.rect.x, WIDTH - self.rect.width))
+            self.rect.y = max(0, min(self.rect.y, HEIGHT - self.rect.height))
 
 class AlienShip(pygame.sprite.Sprite):
     def __init__(self, x, y):
@@ -320,8 +321,10 @@ class AlienShip(pygame.sprite.Sprite):
                             self.rect.x = new_x
                     self.time += 1
 
-                if self.rect.top > HEIGHT or self.rect.right < 0 or self.rect.left > WIDTH:
-                    self.kill()
+            # Ensure the alien ship stays within the screen boundaries
+            self.rect.x = max(0, min(self.rect.x, WIDTH - self.rect.width))
+            self.rect.y = max(0, min(self.rect.y, HEIGHT - self.rect.height))
+
 
 class Bullet(pygame.sprite.Sprite):
     def __init__(self, x, y):
@@ -534,24 +537,26 @@ def main_game():
                 all_sprites.add(alien_ship)
                 alien_ships.add(alien_ship)
             enemies_spawned += 1
+            print(f'Enemies spawned: {enemies_spawned}')  # Debug
 
         hits = pygame.sprite.groupcollide(bullets, enemies, True, True)
         for hit in hits:
             score += 1
-            enemies_killed += 1
             explosion = Explosion(hit.rect.centerx, hit.rect.centery)
             all_sprites.add(explosion)
             explosions.add(explosion)
             explosion_sound.play()
+            print(f'Enemy killed. Total enemies killed: {enemies_killed}')  # Debug
 
         alien_hits = pygame.sprite.groupcollide(bullets, alien_ships, True, True)
         for hit in alien_hits:
             score += 2  # Alien ships give more points
-            enemies_killed += 1
             explosion = Explosion(hit.rect.centerx, hit.rect.centery)
             all_sprites.add(explosion)
             explosions.add(explosion)
             explosion_sound.play()
+            print(f'Alien ship killed. Total enemies killed: {enemies_killed}')  # Debug
+
 
         enemy_hits = pygame.sprite.spritecollide(player, enemies, True)
         alien_ship_hits = pygame.sprite.spritecollide(player, alien_ships, True)
@@ -567,10 +572,26 @@ def main_game():
             player.bullet_count += 1
 
         # Check if all enemies have been killed to spawn the next wave
-        if enemies_killed >= MAX_ENEMIES_PER_WAVE:
+        #print(f'Enemies killed: {enemies_killed} / {MAX_ENEMIES_PER_WAVE}') 
+        if (len(enemies) + len(alien_ships)) == 0:
             enemies_spawned = 0
-            enemies_killed = 0
             level += 1
+
+
+#         for enemy in enemies:
+#             if enemy.rect.top > HEIGHT or enemy.rect.right < 0 or enemy.rect.left > WIDTH:
+#                 enemy.kill()
+#                 enemies_killed += 1
+#                 # print(f'Enemy went off-screen. Total enemies killed: {enemies_killed}')  # Debug
+
+#         for alien_ship in alien_ships:
+#             if alien_ship.rect.top > HEIGHT or alien_ship.rect.right < 0 or alien_ship.rect.left > WIDTH:
+#                 alien_ship.kill()
+#                 enemies_killed += 1
+#                 print(f'Alien ship went off-screen. Total enemies killed: {enemies_killed}')  # Debug
+
+# # Ensure no enemies or alien ships are left when counting kills
+#         print(f'Total enemies on screen: {len(enemies) + len(alien_ships)}')  # Debug
 
         # Drawing
         screen.fill((0, 0, 0))
