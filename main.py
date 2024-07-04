@@ -2,8 +2,9 @@ import pygame
 import sys
 import random
 import math
+import json
 
-# Initialize Pygame her
+# Initialize Pygame here
 pygame.init()
 
 # Screen dimensions
@@ -35,8 +36,6 @@ explosion_image = pygame.image.load("./assets/explosion.png").convert_alpha()
 explosion_image = pygame.transform.scale(explosion_image, (150, 150))  # Adjust the size as needed
 
 # Load images for player and enemies
-# player_image = pygame.image.load("./assets/player.png").convert_alpha()
-# player_image = pygame.transform.scale(player_image, (50, 50))
 character_images = []
 for i in range(1, 6):
     image = pygame.image.load(f"./assets/character_{i}.png").convert_alpha()
@@ -92,15 +91,28 @@ def create_button(text, center_x, center_y):
     screen.blit(text_render, rect)
     return rect
 
-
-# player_image = pygame.image.load("./assets/player.png").convert_alpha()
-# player_image = pygame.transform.scale(player_image, (50, 50))
-enemy_image = pygame.image.load("./assets/enemy.png").convert_alpha()
-enemy_image = pygame.transform.scale(enemy_image, (100, 100))
-
 # Load weapon supply image
 weapon_supply_image = pygame.image.load("./assets/weapon_supply.png").convert_alpha()
 weapon_supply_image = pygame.transform.scale(weapon_supply_image, (80, 80))
+
+# File to store scores
+SCORES_FILE = 'scores.txt'
+
+def save_score(score):
+    try:
+        with open(SCORES_FILE, 'a') as file:
+            file.write(f"{score}\n")
+    except FileNotFoundError:
+        with open(SCORES_FILE, 'w') as file:
+            file.write(f"{score}\n")
+
+def load_scores():
+    try:
+        with open(SCORES_FILE, 'r') as file:
+            scores = [int(line.strip()) for line in file.readlines()]
+            return sorted(scores, reverse=True)[:5]  # Keep only top 5 scores
+    except FileNotFoundError:
+        return []
 
 def draw_volume_bar(label, volume, pos_x, pos_y):
     bar_width = 200
@@ -121,7 +133,6 @@ def draw_volume_bar(label, volume, pos_x, pos_y):
     pygame.draw.rect(screen, WHITE, (pos_x, pos_y - bar_height//2, bar_width, bar_height), 2)
 
     return pygame.Rect(pos_x, pos_y - bar_height//2, bar_width, bar_height)
-
 
 def settings_menu():
     global player_image, current_character_index
@@ -188,8 +199,6 @@ def settings_menu():
 
         pygame.display.flip()
 
-
-
 # Game objects
 class Player(pygame.sprite.Sprite):
     def __init__(self):
@@ -232,7 +241,6 @@ class Player(pygame.sprite.Sprite):
         self.image = image
         self.rect = self.image.get_rect(midbottom=(WIDTH // 2, HEIGHT - 10))
 
-
 class Enemy(pygame.sprite.Sprite):
     def __init__(self, x, y):
         super().__init__()
@@ -253,7 +261,7 @@ class Enemy(pygame.sprite.Sprite):
     def update(self):
         if self.dropping:
             self.rect.y += self.speed_y
-            if self.rect.y >= self.target_y:
+            if (self.rect.y >= self.target_y):
                 self.rect.y = self.target_y
                 self.dropping = False  # Stop dropping and start normal behavior
         else:
@@ -274,7 +282,6 @@ class Enemy(pygame.sprite.Sprite):
             # Ensure the enemy stays within the screen boundaries
             self.rect.x = max(0, min(self.rect.x, WIDTH - self.rect.width))
             self.rect.y = max(0, min(self.rect.y, HEIGHT - self.rect.height))
-
 
 class AlienShip(pygame.sprite.Sprite):
     def __init__(self, x, y):
@@ -344,7 +351,6 @@ class Explosion(pygame.sprite.Sprite):
         if self.timer <= 0:
             self.kill()
 
-
 class WeaponSupply(pygame.sprite.Sprite):
     def __init__(self):
         super().__init__()
@@ -357,16 +363,8 @@ class WeaponSupply(pygame.sprite.Sprite):
         if self.rect.top > HEIGHT:
             self.kill()
 
-
-# def game_over():
-#     game_over_text = font.render("Game Over", True, WHITE)
-#     game_over_rect = game_over_text.get_rect(center=(WIDTH // 2, HEIGHT // 2))
-#     screen.blit(game_over_text, game_over_rect)
-#     pygame.display.flip()
-#     pygame.time.wait(2000)
-#     main_menu()
-
 def game_over(score):
+    save_score(score)
     running = True
     while running:
         screen.fill((0, 0, 0))
@@ -384,9 +382,10 @@ def game_over(score):
         screen.blit(score_text, score_rect)
 
         vertical_gap = 80
-        resume_btn = create_button("Replay", WIDTH // 2, HEIGHT // 2)
-        settings_btn = create_button("Settings", WIDTH // 2, HEIGHT // 2 + vertical_gap)
-        exit_btn = create_button("Exit", WIDTH // 2, HEIGHT // 2 + 2 * vertical_gap)
+        replay_btn = create_button("Replay", WIDTH // 2, HEIGHT // 2)
+        scores_btn = create_button("Scores", WIDTH // 2, HEIGHT // 2 + vertical_gap)
+        settings_btn = create_button("Settings", WIDTH // 2, HEIGHT // 2 + 2 * vertical_gap)
+        exit_btn = create_button("Exit", WIDTH // 2, HEIGHT // 2 + 3 * vertical_gap)
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -394,16 +393,58 @@ def game_over(score):
                 sys.exit()
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 mouse_pos = event.pos
-                if resume_btn.collidepoint(mouse_pos):
+                if replay_btn.collidepoint(mouse_pos):
                     main_game()
+                elif scores_btn.collidepoint(mouse_pos):
+                    high_scores_screen()
                 elif settings_btn.collidepoint(mouse_pos):
-                    print("Settings button clicked")
+                    settings_menu()
                 elif exit_btn.collidepoint(mouse_pos):
                     main_menu()
 
         pygame.display.flip()
 
-def pause_menu():
+def high_scores_screen():
+    scores = load_scores()
+    running = True
+    while running:
+        screen.fill((0, 0, 0))
+
+        for star in stars:
+            star.move()
+            star.draw(screen)
+
+        title_text = font.render("High Scores", True, WHITE)
+        title_rect = title_text.get_rect(center=(WIDTH // 2, HEIGHT // 4))
+        screen.blit(title_text, title_rect)
+
+        for i, score in enumerate(scores):
+            # Render the list number in yellow
+            number_text = score_font.render(f"{i + 1}.", True, YELLOW)
+            number_rect = number_text.get_rect(center=(WIDTH // 2 - 40, HEIGHT // 2 + i * 40))  # Adjust x position for space
+            screen.blit(number_text, number_rect)
+
+            # Render the score in white
+            score_text = score_font.render(f"{score}", True, WHITE)
+            score_rect = score_text.get_rect(center=(WIDTH // 2 + 40, HEIGHT // 2 + i * 40))  # Adjust x position for space
+            screen.blit(score_text, score_rect)
+
+        back_btn = create_button("Back", WIDTH // 2, HEIGHT - 100)
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                mouse_pos = event.pos
+                if back_btn.collidepoint(mouse_pos):
+                    running = False
+
+        pygame.display.flip()
+
+
+def pause_menu(current_score):
+    save_score(current_score)
     running = True
     while running:
         screen.fill((0, 0, 0))
@@ -430,12 +471,11 @@ def pause_menu():
                 if resume_btn.collidepoint(mouse_pos):
                     running = False
                 elif settings_btn.collidepoint(mouse_pos):
-                    print("Settings button clicked")
+                    settings_menu()
                 elif exit_btn.collidepoint(mouse_pos):
                     main_menu()
 
         pygame.display.flip()
-
 
 def main_game():
     global all_sprites, bullets, enemies, alien_ships, explosions, weapon_supplies
@@ -452,7 +492,6 @@ def main_game():
 
     LEVELS = 3  # Total number of levels
     level = 1   # Current level
-    level_score_requirement = 10  
     score = 0
     lives = player.lives
 
@@ -473,7 +512,7 @@ def main_game():
                 if event.key == pygame.K_SPACE:
                     player.shoot()
                 elif event.key == pygame.K_ESCAPE:
-                    pause_menu()
+                    pause_menu(score)
             elif event.type == weapon_supply_event:
                 weapon_supply = WeaponSupply()
                 all_sprites.add(weapon_supply)
@@ -526,7 +565,8 @@ def main_game():
             lives -= 1
             if player.lives <= 0:
                 game_over(score)
- 
+                return  # Exit the function to avoid continuing after game over
+
         supply_hits = pygame.sprite.spritecollide(player, weapon_supplies, True)
         for supply in supply_hits:
             player.bullet_count += 1
@@ -536,6 +576,7 @@ def main_game():
         if (len(enemies) + len(alien_ships)) == 0:
             enemies_spawned = 0
             level += 1
+
 
 #         for enemy in enemies:
 #             if enemy.rect.top > HEIGHT or enemy.rect.right < 0 or enemy.rect.left > WIDTH:
@@ -572,8 +613,6 @@ def main_game():
 
         pygame.display.flip()
 
-
-
 def main_menu():
     running = True
     while running:
@@ -605,7 +644,7 @@ def main_menu():
                 elif multiplayer_btn.collidepoint(mouse_pos):
                     print("Multiplayer button clicked")
                 elif scores_btn.collidepoint(mouse_pos):
-                    print("Scores button clicked")
+                    high_scores_screen()
                 elif settings_btn.collidepoint(mouse_pos):
                     settings_menu()
                 elif exit_btn.collidepoint(mouse_pos):
