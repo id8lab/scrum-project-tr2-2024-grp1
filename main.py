@@ -2,8 +2,9 @@ import pygame
 import sys
 import random
 import math
+import json
 
-# Initialize Pygame her
+# Initialize Pygame here
 pygame.init()
 
 # Screen dimensions
@@ -34,9 +35,8 @@ shooting_sound.set_volume(0.2)
 explosion_image = pygame.image.load("./assets/explosion.png").convert_alpha()
 explosion_image = pygame.transform.scale(explosion_image, (150, 150))  # Adjust the size as needed
 
+
 # Load images for player and enemies
-# player_image = pygame.image.load("./assets/player.png").convert_alpha()
-# player_image = pygame.transform.scale(player_image, (50, 50))
 character_images = []
 for i in range(1, 6):
     image = pygame.image.load(f"./assets/character_{i}.png").convert_alpha()
@@ -51,10 +51,21 @@ enemy_image = pygame.transform.scale(enemy_image, (100, 100))
 alien_ship_image = pygame.image.load("./assets/alien_ships.png").convert_alpha()
 alien_ship_image = pygame.transform.scale(alien_ship_image, (100, 100))
 
+boss_image = pygame.image.load("./assets/enemyboss.png").convert_alpha()
+boss_image = pygame.transform.scale(boss_image, (200, 200))  # Adjust the size as needed
+
 # Font
 font = pygame.font.Font(None, 74)
 button_font = pygame.font.Font(None, 50)
 score_font = pygame.font.Font(None, 36)
+
+# Sprite groups
+all_sprites = pygame.sprite.Group()
+enemies = pygame.sprite.Group()
+
+# Game constants
+ENEMY_COUNT = 20
+enemy_spawned = False
 
 # Star class for the animated background
 class Star:
@@ -84,15 +95,28 @@ def create_button(text, center_x, center_y):
     screen.blit(text_render, rect)
     return rect
 
-
-# player_image = pygame.image.load("./assets/player.png").convert_alpha()
-# player_image = pygame.transform.scale(player_image, (50, 50))
-enemy_image = pygame.image.load("./assets/enemy.png").convert_alpha()
-enemy_image = pygame.transform.scale(enemy_image, (100, 100))
-
 # Load weapon supply image
 weapon_supply_image = pygame.image.load("./assets/weapon_supply.png").convert_alpha()
 weapon_supply_image = pygame.transform.scale(weapon_supply_image, (80, 80))
+
+# File to store scores
+SCORES_FILE = 'scores.txt'
+
+def save_score(score):
+    try:
+        with open(SCORES_FILE, 'a') as file:
+            file.write(f"{score}\n")
+    except FileNotFoundError:
+        with open(SCORES_FILE, 'w') as file:
+            file.write(f"{score}\n")
+
+def load_scores():
+    try:
+        with open(SCORES_FILE, 'r') as file:
+            scores = [int(line.strip()) for line in file.readlines()]
+            return sorted(scores, reverse=True)[:5]  # Keep only top 5 scores
+    except FileNotFoundError:
+        return []
 
 def draw_volume_bar(label, volume, pos_x, pos_y):
     bar_width = 200
@@ -113,7 +137,6 @@ def draw_volume_bar(label, volume, pos_x, pos_y):
     pygame.draw.rect(screen, WHITE, (pos_x, pos_y - bar_height//2, bar_width, bar_height), 2)
 
     return pygame.Rect(pos_x, pos_y - bar_height//2, bar_width, bar_height)
-
 
 def settings_menu():
     global player_image, current_character_index
@@ -181,6 +204,49 @@ def settings_menu():
         pygame.display.flip()
 
 
+class EnemyBoss(pygame.sprite.Sprite):
+    def __init__(self, x, y):
+        super().__init__()
+        self.image = boss_image
+        self.rect = self.image.get_rect(topleft=(x, y))
+        self.speed_y = random.uniform(0.5, 1.0)
+        self.amplitude = random.uniform(30, 80)
+        self.frequency = random.uniform(0.01, 0.03)
+        self.start_x = x
+        self.time = 0
+        self.shoot_delay = 1000  # Delay between each shot in milliseconds
+        self.last_shot = pygame.time.get_ticks()
+
+    def update(self):
+        self.rect.y += self.speed_y
+        if self.rect.top >= HEIGHT // 4:
+            self.speed_y = 0  # Stop moving down once it reaches a certain point
+
+        self.rect.x = self.start_x + self.amplitude * math.sin(self.frequency * self.time)
+        self.time += 1
+
+        now = pygame.time.get_ticks()
+        if now - self.last_shot > self.shoot_delay:
+            self.last_shot = now
+            self.shoot()
+
+    def shoot(self):
+        boss_bullet = BossBullet(self.rect.centerx, self.rect.bottom)
+        all_sprites.add(boss_bullet)
+        boss_bullets.add(boss_bullet)
+    
+class BossBullet(pygame.sprite.Sprite):
+    def __init__(self, x, y):
+        super().__init__()
+        self.image = pygame.Surface((10, 30))
+        self.image.fill(RED)
+        self.rect = self.image.get_rect(midtop=(x, y))
+        self.speed_y = 5
+
+    def update(self):
+        self.rect.y += self.speed_y
+        if self.rect.top > HEIGHT:
+            self.kill()
 
 # Game objects
 class Player(pygame.sprite.Sprite):
@@ -224,42 +290,90 @@ class Player(pygame.sprite.Sprite):
         self.image = image
         self.rect = self.image.get_rect(midbottom=(WIDTH // 2, HEIGHT - 10))
 
-
 class Enemy(pygame.sprite.Sprite):
     def __init__(self, x, y):
         super().__init__()
         self.image = enemy_image
-        self.rect = self.image.get_rect(topleft=(x, y))
-        self.speed_y = random.uniform(0.5, 1.0)  # Adjust the vertical speed of the enemies
-        self.amplitude = random.uniform(30, 80)  # Amplitude of the sine wave
-        self.frequency = random.uniform(0.01, 0.03)  # Frequency of the sine wave
-        self.start_x = x  # Store the initial x position
-        self.time = 0  # Time counter for the sine wave
+        self.rect = self.image.get_rect(topleft=(x, 0))  # Start at the top of the screen
+        self.target_y = y  # The designated position
+        self.speed_y = random.uniform(0.5, 1.0)
+        self.speed_x = random.uniform(0.8, 1.5)
+        self.amplitude = random.uniform(30, 80)
+        self.frequency = random.uniform(0.01, 0.03)
+        self.start_x = x
+        self.time = 0
+        self.oscillate = random.choice([True, False])
+        self.horizontal = random.choice([True, False])
+        self.oscillate_start_y = random.randint(HEIGHT // 4, HEIGHT // 2)
+        self.dropping = True  # Initial state is dropping down
 
     def update(self):
-        self.rect.y += self.speed_y
-        self.rect.x = self.start_x + self.amplitude * math.sin(self.frequency * self.time)
-        self.time += 1
-        if self.rect.top > HEIGHT or self.rect.right < 0 or self.rect.left > WIDTH:  # Check if the enemy is off the screen
-            self.kill()
+        if self.dropping:
+            self.rect.y += self.speed_y
+            if (self.rect.y >= self.target_y):
+                self.rect.y = self.target_y
+                self.dropping = False  # Stop dropping and start normal behavior
+        else:
+            if self.horizontal:
+                self.rect.x += self.speed_x
+                if self.rect.left <= 0 or self.rect.right >= WIDTH:
+                    self.speed_x *= -1
+            else:
+                if self.rect.y < self.oscillate_start_y:
+                    self.rect.y += self.speed_y
+                else:
+                    if self.oscillate:
+                        new_x = self.start_x + self.amplitude * math.sin(self.frequency * self.time)
+                        if abs(new_x - self.rect.x) > 1:  # Ensure noticeable movement
+                            self.rect.x = new_x
+                    self.time += 1
+
+            # Ensure the enemy stays within the screen boundaries
+            self.rect.x = max(0, min(self.rect.x, WIDTH - self.rect.width))
+            self.rect.y = max(0, min(self.rect.y, HEIGHT - self.rect.height))
 
 class AlienShip(pygame.sprite.Sprite):
     def __init__(self, x, y):
         super().__init__()
         self.image = alien_ship_image
-        self.rect = self.image.get_rect(topleft=(x, y))
-        self.speed_y = random.uniform(0.7, 1.5)  # Adjust the vertical speed of the alien ships
-        self.amplitude = random.uniform(50, 100)  # Amplitude of the sine wave
-        self.frequency = random.uniform(0.01, 0.05)  # Frequency of the sine wave
-        self.start_x = x  # Store the initial x position
-        self.time = 0  # Time counter for the sine wave
+        self.rect = self.image.get_rect(topleft=(x, 0))  # Start at the top of the screen
+        self.target_y = y  # The designated position
+        self.speed_y = random.uniform(0.7, 1.5)
+        self.speed_x = random.uniform(0.8, 1.5)
+        self.amplitude = random.uniform(50, 100)
+        self.frequency = random.uniform(0.01, 0.05)
+        self.start_x = x
+        self.time = 0
+        self.oscillate = random.choice([True, False])
+        self.horizontal = random.choice([True, False])
+        self.oscillate_start_y = random.randint(HEIGHT // 4, HEIGHT // 2)
+        self.dropping = True  # Initial state is dropping down
 
     def update(self):
-        self.rect.y += self.speed_y
-        self.rect.x = self.start_x + self.amplitude * math.sin(self.frequency * self.time)
-        self.time += 1
-        if self.rect.top > HEIGHT or self.rect.right < 0 or self.rect.left > WIDTH:  # Check if the alien ship is off the screen
-            self.kill()
+        if self.dropping:
+            self.rect.y += self.speed_y
+            if self.rect.y >= self.target_y:
+                self.rect.y = self.target_y
+                self.dropping = False  # Stop dropping and start normal behavior
+        else:
+            if self.horizontal:
+                self.rect.x += self.speed_x
+                if self.rect.left <= 0 or self.rect.right >= WIDTH:
+                    self.speed_x *= -1
+            else:
+                if self.rect.y < self.oscillate_start_y:
+                    self.rect.y += self.speed_y
+                else:
+                    if self.oscillate:
+                        new_x = self.start_x + self.amplitude * math.sin(self.frequency * self.time)
+                        if abs(new_x - self.rect.x) > 1:  # Ensure noticeable movement
+                            self.rect.x = new_x
+                    self.time += 1
+
+            # Ensure the alien ship stays within the screen boundaries
+            self.rect.x = max(0, min(self.rect.x, WIDTH - self.rect.width))
+            self.rect.y = max(0, min(self.rect.y, HEIGHT - self.rect.height))
+
 
 class Bullet(pygame.sprite.Sprite):
     def __init__(self, x, y):
@@ -286,7 +400,6 @@ class Explosion(pygame.sprite.Sprite):
         if self.timer <= 0:
             self.kill()
 
-
 class WeaponSupply(pygame.sprite.Sprite):
     def __init__(self):
         super().__init__()
@@ -299,16 +412,8 @@ class WeaponSupply(pygame.sprite.Sprite):
         if self.rect.top > HEIGHT:
             self.kill()
 
-
-# def game_over():
-#     game_over_text = font.render("Game Over", True, WHITE)
-#     game_over_rect = game_over_text.get_rect(center=(WIDTH // 2, HEIGHT // 2))
-#     screen.blit(game_over_text, game_over_rect)
-#     pygame.display.flip()
-#     pygame.time.wait(2000)
-#     main_menu()
-
 def game_over(score):
+    save_score(score)
     running = True
     while running:
         screen.fill((0, 0, 0))
@@ -326,9 +431,10 @@ def game_over(score):
         screen.blit(score_text, score_rect)
 
         vertical_gap = 80
-        resume_btn = create_button("Replay", WIDTH // 2, HEIGHT // 2)
-        settings_btn = create_button("Settings", WIDTH // 2, HEIGHT // 2 + vertical_gap)
-        exit_btn = create_button("Exit", WIDTH // 2, HEIGHT // 2 + 2 * vertical_gap)
+        replay_btn = create_button("Replay", WIDTH // 2, HEIGHT // 2)
+        scores_btn = create_button("Scores", WIDTH // 2, HEIGHT // 2 + vertical_gap)
+        settings_btn = create_button("Settings", WIDTH // 2, HEIGHT // 2 + 2 * vertical_gap)
+        exit_btn = create_button("Exit", WIDTH // 2, HEIGHT // 2 + 3 * vertical_gap)
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -336,16 +442,58 @@ def game_over(score):
                 sys.exit()
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 mouse_pos = event.pos
-                if resume_btn.collidepoint(mouse_pos):
+                if replay_btn.collidepoint(mouse_pos):
                     main_game()
+                elif scores_btn.collidepoint(mouse_pos):
+                    high_scores_screen()
                 elif settings_btn.collidepoint(mouse_pos):
-                    print("Settings button clicked")
+                    settings_menu()
                 elif exit_btn.collidepoint(mouse_pos):
                     main_menu()
 
         pygame.display.flip()
 
-def pause_menu():
+def high_scores_screen():
+    scores = load_scores()
+    running = True
+    while running:
+        screen.fill((0, 0, 0))
+
+        for star in stars:
+            star.move()
+            star.draw(screen)
+
+        title_text = font.render("High Scores", True, WHITE)
+        title_rect = title_text.get_rect(center=(WIDTH // 2, HEIGHT // 4))
+        screen.blit(title_text, title_rect)
+
+        for i, score in enumerate(scores):
+            # Render the list number in yellow
+            number_text = score_font.render(f"{i + 1}.", True, YELLOW)
+            number_rect = number_text.get_rect(center=(WIDTH // 2 - 40, HEIGHT // 2 + i * 40))  # Adjust x position for space
+            screen.blit(number_text, number_rect)
+
+            # Render the score in white
+            score_text = score_font.render(f"{score}", True, WHITE)
+            score_rect = score_text.get_rect(center=(WIDTH // 2 + 40, HEIGHT // 2 + i * 40))  # Adjust x position for space
+            screen.blit(score_text, score_rect)
+
+        back_btn = create_button("Back", WIDTH // 2, HEIGHT - 100)
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                mouse_pos = event.pos
+                if back_btn.collidepoint(mouse_pos):
+                    running = False
+
+        pygame.display.flip()
+
+
+def pause_menu(current_score):
+    save_score(current_score)
     running = True
     while running:
         screen.fill((0, 0, 0))
@@ -372,36 +520,37 @@ def pause_menu():
                 if resume_btn.collidepoint(mouse_pos):
                     running = False
                 elif settings_btn.collidepoint(mouse_pos):
-                    print("Settings button clicked")
+                    settings_menu()
                 elif exit_btn.collidepoint(mouse_pos):
                     main_menu()
 
         pygame.display.flip()
 
 def main_game():
-    global all_sprites, bullets, enemies, alien_ships, explosions, weapon_supplies
+    global all_sprites, bullets, enemies, alien_ships, explosions, weapon_supplies, boss_bullets, boss
 
-    # Re-initialize sprite groups
     all_sprites = pygame.sprite.Group()
     bullets = pygame.sprite.Group()
     enemies = pygame.sprite.Group()
     alien_ships = pygame.sprite.Group()
     explosions = pygame.sprite.Group()
     weapon_supplies = pygame.sprite.Group()
-    
+    boss_bullets = pygame.sprite.Group()
+
     player = Player()
     all_sprites.add(player)
 
     LEVELS = 3  # Total number of levels
     level = 1   # Current level
-    level_score_requirement = 10  
     score = 0
     lives = player.lives
 
-    enemy_spawn_event = pygame.USEREVENT + 1
-    alien_ship_spawn_event = pygame.USEREVENT + 2
-    pygame.time.set_timer(enemy_spawn_event, 1000)
-    pygame.time.set_timer(alien_ship_spawn_event, 3000)
+    MAX_ENEMIES_PER_WAVE = 20
+    enemies_spawned = 0
+    enemies_killed = 0
+
+    boss_died = True
+    boss_hit_count = 0
 
     weapon_supply_event = pygame.USEREVENT + 3
     pygame.time.set_timer(weapon_supply_event, 3000)  # Adjust the time as needed
@@ -416,22 +565,11 @@ def main_game():
                 if event.key == pygame.K_SPACE:
                     player.shoot()
                 elif event.key == pygame.K_ESCAPE:
-                    pause_menu()
-            elif event.type == enemy_spawn_event:
-                enemy = Enemy(random.randint(0, WIDTH - 40), -40)
-                all_sprites.add(enemy)
-                enemies.add(enemy)
-
-            elif event.type == alien_ship_spawn_event:
-                alien_ship = AlienShip(random.randint(0, WIDTH - 40), -40)
-                all_sprites.add(alien_ship)
-                alien_ships.add(alien_ship)
-
+                    pause_menu(score)
             elif event.type == weapon_supply_event:
                 weapon_supply = WeaponSupply()
                 all_sprites.add(weapon_supply)
                 weapon_supplies.add(weapon_supply)
-
 
         keys = pygame.key.get_pressed()
         player.update(keys)
@@ -440,6 +578,26 @@ def main_game():
             if sprite != player:
                 sprite.update()
 
+
+
+        # Spawn enemies if needed
+        if enemies_spawned < MAX_ENEMIES_PER_WAVE and len(enemies) + len(alien_ships) < MAX_ENEMIES_PER_WAVE and boss_died:
+            enemy_type = random.choice(['enemy', 'alien'])
+            boss = EnemyBoss(WIDTH // 2 - 100, -200)
+            if enemy_type == 'enemy':
+                enemy = Enemy(random.randint(0, WIDTH - 40), random.randint(-40, HEIGHT // 2 - 40))
+                all_sprites.add(enemy)
+                enemies.add(enemy)
+            else:
+                alien_ship = AlienShip(random.randint(0, WIDTH - 40), random.randint(-40, HEIGHT // 2 - 40))
+                all_sprites.add(alien_ship)
+                alien_ships.add(alien_ship)
+            enemies_spawned += 1
+            if (len(enemies) + len(alien_ships)) ==  20:
+                boss_hit_count = 0
+                all_sprites.add(boss)
+                boss_died = False
+
         hits = pygame.sprite.groupcollide(bullets, enemies, True, True)
         for hit in hits:
             score += 1
@@ -447,6 +605,7 @@ def main_game():
             all_sprites.add(explosion)
             explosions.add(explosion)
             explosion_sound.play()
+            print(f'Enemy killed. Total enemies killed: {enemies_killed}')  # Debug
 
         alien_hits = pygame.sprite.groupcollide(bullets, alien_ships, True, True)
         for hit in alien_hits:
@@ -455,6 +614,20 @@ def main_game():
             all_sprites.add(explosion)
             explosions.add(explosion)
             explosion_sound.play()
+            print(f'Alien ship killed. Total enemies killed: {enemies_killed}')  # Debug
+
+        boss_killed = pygame.sprite.spritecollide(boss, bullets, True)
+        if boss_killed:
+            boss_hit_count += 1  
+            if boss_hit_count > 5:
+                score += 10 
+                explosion = Explosion(boss.rect.centerx, boss.rect.centery)
+                all_sprites.add(explosion)
+                explosions.add(explosion)
+                explosion_sound.play()
+                boss.kill()
+                boss_died = True
+
 
         enemy_hits = pygame.sprite.spritecollide(player, enemies, True)
         alien_ship_hits = pygame.sprite.spritecollide(player, alien_ships, True)
@@ -463,25 +636,31 @@ def main_game():
             lives -= 1
             if player.lives <= 0:
                 game_over(score)
+                return  # Exit the function to avoid continuing after game over
 
         supply_hits = pygame.sprite.spritecollide(player, weapon_supplies, True)
         for supply in supply_hits:
             player.bullet_count += 1
+        
 
+        boss_hits = pygame.sprite.spritecollide(player, boss_bullets, True)
+        if boss_hits:
+            player.lives -= 1
+            lives -= 1
+            if player.lives <= 0:
+                game_over(score)
 
-        # Check if the player has reached the score requirement for the next level
-        if score >= level * level_score_requirement and level < LEVELS:
+        if (len(enemies) + len(alien_ships)) == 0:
+            enemies_spawned = 0
             level += 1
-            # Adjust any level-specific parameters here, like enemy spawn rate
-            pygame.time.set_timer(enemy_spawn_event, 1000 // level)
-            pygame.time.set_timer(alien_ship_spawn_event, 3000 // level)
+
 
         # Drawing
         screen.fill((0, 0, 0))
         for star in stars:
             star.move()
             star.draw(screen)
-        
+
         all_sprites.draw(screen)
 
         score_text = score_font.render(f"Score: {score}", True, WHITE)
@@ -527,7 +706,7 @@ def main_menu():
                 elif multiplayer_btn.collidepoint(mouse_pos):
                     print("Multiplayer button clicked")
                 elif scores_btn.collidepoint(mouse_pos):
-                    print("Scores button clicked")
+                    high_scores_screen()
                 elif settings_btn.collidepoint(mouse_pos):
                     settings_menu()
                 elif exit_btn.collidepoint(mouse_pos):
