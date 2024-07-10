@@ -373,10 +373,9 @@ class Enemy(pygame.sprite.Sprite):
                 self.direction = 'left'
 
     def move_in_circle(self):
-        self.angle += self.speed_x  # Slower angular speed for circular movement
+        self.angle += self.speed_x * 0.02  # Reduce the angular speed for smoother movement
         self.rect.x = self.center_x + self.radius * math.cos(self.angle)
         self.rect.y = self.center_y + self.radius * math.sin(self.angle)
-
 
 class AlienShip(pygame.sprite.Sprite):
     def __init__(self, x, y):
