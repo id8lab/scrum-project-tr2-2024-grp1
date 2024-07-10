@@ -35,6 +35,7 @@ shooting_sound.set_volume(0.2)
 explosion_image = pygame.image.load("./assets/explosion.png").convert_alpha()
 explosion_image = pygame.transform.scale(explosion_image, (150, 150))  # Adjust the size as needed
 
+
 # Load images for player and enemies
 character_images = []
 for i in range(1, 6):
@@ -49,6 +50,9 @@ enemy_image = pygame.image.load("./assets/enemy.png").convert_alpha()
 enemy_image = pygame.transform.scale(enemy_image, (100, 100))
 alien_ship_image = pygame.image.load("./assets/alien_ships.png").convert_alpha()
 alien_ship_image = pygame.transform.scale(alien_ship_image, (100, 100))
+
+boss_image = pygame.image.load("./assets/enemyboss.png").convert_alpha()
+boss_image = pygame.transform.scale(boss_image, (200, 200))  # Adjust the size as needed
 
 # Font
 font = pygame.font.Font(None, 74)
@@ -84,11 +88,15 @@ class Star:
 stars = [Star() for _ in range(100)]
 
 # Button function
-def create_button(text, center_x, center_y):
+def create_button(text, center_x, center_y, width=300, height=70):
+    rect = pygame.Rect(0,0, width, height)
+    rect.center = (center_x, center_y)
     text_render = button_font.render(text, True, WHITE)
-    rect = text_render.get_rect(center=(center_x, center_y))
-    pygame.draw.rect(screen, GRAY, rect.inflate(20, 20))
-    screen.blit(text_render, rect)
+    text_rect = text_render.get_rect(center=(center_x, center_y))
+    rect.size = (width, height)
+    pygame.draw.rect(screen, GRAY, rect)
+    pygame.draw.rect(screen, WHITE, rect, 2)
+    screen.blit(text_render, text_rect)
     return rect
 
 # Load weapon supply image
@@ -199,6 +207,51 @@ def settings_menu():
 
         pygame.display.flip()
 
+
+class EnemyBoss(pygame.sprite.Sprite):
+    def __init__(self, x, y):
+        super().__init__()
+        self.image = boss_image
+        self.rect = self.image.get_rect(topleft=(x, y))
+        self.speed_y = random.uniform(0.5, 1.0)
+        self.amplitude = random.uniform(30, 80)
+        self.frequency = random.uniform(0.01, 0.03)
+        self.start_x = x
+        self.time = 0
+        self.shoot_delay = 1000  # Delay between each shot in milliseconds
+        self.last_shot = pygame.time.get_ticks()
+
+    def update(self):
+        self.rect.y += self.speed_y
+        if self.rect.top >= HEIGHT // 4:
+            self.speed_y = 0  # Stop moving down once it reaches a certain point
+
+        self.rect.x = self.start_x + self.amplitude * math.sin(self.frequency * self.time)
+        self.time += 1
+
+        now = pygame.time.get_ticks()
+        if now - self.last_shot > self.shoot_delay:
+            self.last_shot = now
+            self.shoot()
+
+    def shoot(self):
+        boss_bullet = BossBullet(self.rect.centerx, self.rect.bottom)
+        all_sprites.add(boss_bullet)
+        boss_bullets.add(boss_bullet)
+    
+class BossBullet(pygame.sprite.Sprite):
+    def __init__(self, x, y):
+        super().__init__()
+        self.image = pygame.Surface((10, 30))
+        self.image.fill(RED)
+        self.rect = self.image.get_rect(midtop=(x, y))
+        self.speed_y = 5
+
+    def update(self):
+        self.rect.y += self.speed_y
+        if self.rect.top > HEIGHT:
+            self.kill()
+
 # Game objects
 class Player(pygame.sprite.Sprite):
     def __init__(self):
@@ -248,7 +301,7 @@ class Enemy(pygame.sprite.Sprite):
         self.rect = self.image.get_rect(topleft=(x, 0))  # Start at the top of the screen
         self.target_y = y  # The designated position
         self.speed_y = random.uniform(0.5, 1.0)
-        self.speed_x = random.uniform(0.8, 1.5)
+        self.speed_x = random.uniform(0.2, 0.5)  # Slower angular speed for circular movement
         self.amplitude = random.uniform(30, 80)
         self.frequency = random.uniform(0.01, 0.03)
         self.start_x = x
@@ -258,30 +311,72 @@ class Enemy(pygame.sprite.Sprite):
         self.oscillate_start_y = random.randint(HEIGHT // 4, HEIGHT // 2)
         self.dropping = True  # Initial state is dropping down
 
+        self.square_move = random.choice([True, False])
+        self.circle_move = random.choice([True, False])
+        self.direction = 'left'  # Initial direction for square movement
+
+        self.radius = random.uniform(100, 200)  # Larger radius for bigger circles
+        self.angle = 0
+        self.center_x = x
+        self.center_y = y
+
     def update(self):
         if self.dropping:
             self.rect.y += self.speed_y
-            if (self.rect.y >= self.target_y):
+            if self.rect.y >= self.target_y:
                 self.rect.y = self.target_y
                 self.dropping = False  # Stop dropping and start normal behavior
         else:
-            if self.horizontal:
-                self.rect.x += self.speed_x
-                if self.rect.left <= 0 or self.rect.right >= WIDTH:
-                    self.speed_x *= -1
+            if self.circle_move:
+                self.move_in_circle()
+            elif self.square_move:
+                self.move_in_square()
             else:
-                if self.rect.y < self.oscillate_start_y:
-                    self.rect.y += self.speed_y
+                if self.horizontal:
+                    self.rect.x += self.speed_x
+                    if self.rect.left <= 0 or self.rect.right >= WIDTH:
+                        self.speed_x *= -1
                 else:
-                    if self.oscillate:
-                        new_x = self.start_x + self.amplitude * math.sin(self.frequency * self.time)
-                        if abs(new_x - self.rect.x) > 1:  # Ensure noticeable movement
-                            self.rect.x = new_x
-                    self.time += 1
+                    if self.rect.y < self.oscillate_start_y:
+                        self.rect.y += self.speed_y
+                    else:
+                        if self.oscillate:
+                            new_x = self.start_x + self.amplitude * math.sin(self.frequency * self.time)
+                            if abs(new_x - self.rect.x) > 1:  # Ensure noticeable movement
+                                self.rect.x = new_x
+                        self.time += 1
 
             # Ensure the enemy stays within the screen boundaries
             self.rect.x = max(0, min(self.rect.x, WIDTH - self.rect.width))
             self.rect.y = max(0, min(self.rect.y, HEIGHT - self.rect.height))
+
+    def move_in_square(self):
+        if self.direction == 'left':
+            self.rect.x -= self.speed_x
+            if self.rect.x <= 0:
+                self.rect.x = 0
+                self.direction = 'up'
+        elif self.direction == 'up':
+            self.rect.y -= self.speed_y
+            if self.rect.y <= 0:
+                self.rect.y = 0
+                self.direction = 'right'
+        elif self.direction == 'right':
+            self.rect.x += self.speed_x
+            if self.rect.x >= WIDTH - self.rect.width:
+                self.rect.x = WIDTH - self.rect.width
+                self.direction = 'down'
+        elif self.direction == 'down':
+            self.rect.y += self.speed_y
+            if self.rect.y >= self.target_y:
+                self.rect.y = self.target_y
+                self.direction = 'left'
+
+    def move_in_circle(self):
+        self.angle += self.speed_x  # Slower angular speed for circular movement
+        self.rect.x = self.center_x + self.radius * math.cos(self.angle)
+        self.rect.y = self.center_y + self.radius * math.sin(self.angle)
+
 
 class AlienShip(pygame.sprite.Sprite):
     def __init__(self, x, y):
@@ -296,9 +391,12 @@ class AlienShip(pygame.sprite.Sprite):
         self.start_x = x
         self.time = 0
         self.oscillate = random.choice([True, False])
-        self.horizontal = random.choice([True, False])
+        self.horizontal = True
         self.oscillate_start_y = random.randint(HEIGHT // 4, HEIGHT // 2)
         self.dropping = True  # Initial state is dropping down
+
+        self.square_move = random.choice([True, False])
+        self.direction = 'left'  # Initial direction for square movement
 
     def update(self):
         if self.dropping:
@@ -307,23 +405,49 @@ class AlienShip(pygame.sprite.Sprite):
                 self.rect.y = self.target_y
                 self.dropping = False  # Stop dropping and start normal behavior
         else:
-            if self.horizontal:
-                self.rect.x += self.speed_x
-                if self.rect.left <= 0 or self.rect.right >= WIDTH:
-                    self.speed_x *= -1
+            if self.square_move:
+                self.move_in_square()
             else:
-                if self.rect.y < self.oscillate_start_y:
-                    self.rect.y += self.speed_y
+                if self.horizontal:
+                    self.rect.x += self.speed_x
+                    if self.rect.left <= 0 or self.rect.right >= WIDTH:
+                        self.speed_x *= -1
                 else:
-                    if self.oscillate:
-                        new_x = self.start_x + self.amplitude * math.sin(self.frequency * self.time)
-                        if abs(new_x - self.rect.x) > 1:  # Ensure noticeable movement
-                            self.rect.x = new_x
-                    self.time += 1
+                    if self.rect.y < self.oscillate_start_y:
+                        self.rect.y += self.speed_y
+                    else:
+                        if self.oscillate:
+                            new_x = self.start_x + self.amplitude * math.sin(self.frequency * self.time)
+                            if abs(new_x - self.rect.x) > 1:  # Ensure noticeable movement
+                                self.rect.x = new_x
+                        self.time += 1
 
             # Ensure the alien ship stays within the screen boundaries
             self.rect.x = max(0, min(self.rect.x, WIDTH - self.rect.width))
             self.rect.y = max(0, min(self.rect.y, HEIGHT - self.rect.height))
+
+    def move_in_square(self):
+        if self.direction == 'left':
+            self.rect.x -= self.speed_x
+            if self.rect.x <= 0:
+                self.rect.x = 0
+                self.direction = 'up'
+        elif self.direction == 'up':
+            self.rect.y -= self.speed_y
+            if self.rect.y <= 0:
+                self.rect.y = 0
+                self.direction = 'right'
+        elif self.direction == 'right':
+            self.rect.x += self.speed_x
+            if self.rect.x >= WIDTH - self.rect.width:
+                self.rect.x = WIDTH - self.rect.width
+                self.direction = 'down'
+        elif self.direction == 'down':
+            self.rect.y += self.speed_y
+            if self.rect.y >= self.target_y:
+                self.rect.y = self.target_y
+                self.direction = 'left'
+
 
 
 class Bullet(pygame.sprite.Sprite):
@@ -478,7 +602,7 @@ def pause_menu(current_score):
         pygame.display.flip()
 
 def main_game():
-    global all_sprites, bullets, enemies, alien_ships, explosions, weapon_supplies
+    global all_sprites, bullets, enemies, alien_ships, explosions, weapon_supplies, boss_bullets, boss
 
     all_sprites = pygame.sprite.Group()
     bullets = pygame.sprite.Group()
@@ -486,6 +610,7 @@ def main_game():
     alien_ships = pygame.sprite.Group()
     explosions = pygame.sprite.Group()
     weapon_supplies = pygame.sprite.Group()
+    boss_bullets = pygame.sprite.Group()
 
     player = Player()
     all_sprites.add(player)
@@ -498,6 +623,9 @@ def main_game():
     MAX_ENEMIES_PER_WAVE = 20
     enemies_spawned = 0
     enemies_killed = 0
+
+    boss_died = True
+    boss_hit_count = 0
 
     weapon_supply_event = pygame.USEREVENT + 3
     pygame.time.set_timer(weapon_supply_event, 3000)  # Adjust the time as needed
@@ -525,9 +653,12 @@ def main_game():
             if sprite != player:
                 sprite.update()
 
+
+
         # Spawn enemies if needed
-        if enemies_spawned < MAX_ENEMIES_PER_WAVE and len(enemies) + len(alien_ships) < MAX_ENEMIES_PER_WAVE:
+        if enemies_spawned < MAX_ENEMIES_PER_WAVE and len(enemies) + len(alien_ships) < MAX_ENEMIES_PER_WAVE and boss_died:
             enemy_type = random.choice(['enemy', 'alien'])
+            boss = EnemyBoss(WIDTH // 2 - 100, -200)
             if enemy_type == 'enemy':
                 enemy = Enemy(random.randint(0, WIDTH - 40), random.randint(-40, HEIGHT // 2 - 40))
                 all_sprites.add(enemy)
@@ -537,7 +668,10 @@ def main_game():
                 all_sprites.add(alien_ship)
                 alien_ships.add(alien_ship)
             enemies_spawned += 1
-            print(f'Enemies spawned: {enemies_spawned}')  # Debug
+            if (len(enemies) + len(alien_ships)) ==  20:
+                boss_hit_count = 0
+                all_sprites.add(boss)
+                boss_died = False
 
         hits = pygame.sprite.groupcollide(bullets, enemies, True, True)
         for hit in hits:
@@ -557,6 +691,19 @@ def main_game():
             explosion_sound.play()
             print(f'Alien ship killed. Total enemies killed: {enemies_killed}')  # Debug
 
+        boss_killed = pygame.sprite.spritecollide(boss, bullets, True)
+        if boss_killed and not boss_died:
+            boss_hit_count += 1  
+            if boss_hit_count > 5:
+                for hit in boss_killed:
+                    score += 10 
+                    explosion = Explosion(hit.rect.centerx, hit.rect.centery)
+                    all_sprites.add(explosion)
+                    explosions.add(explosion)
+                    explosion_sound.play()
+                    boss.kill()
+                    boss_died = True
+
 
         enemy_hits = pygame.sprite.spritecollide(player, enemies, True)
         alien_ship_hits = pygame.sprite.spritecollide(player, alien_ships, True)
@@ -570,28 +717,19 @@ def main_game():
         supply_hits = pygame.sprite.spritecollide(player, weapon_supplies, True)
         for supply in supply_hits:
             player.bullet_count += 1
+        
 
-        # Check if all enemies have been killed to spawn the next wave
-        #print(f'Enemies killed: {enemies_killed} / {MAX_ENEMIES_PER_WAVE}') 
+        boss_hits = pygame.sprite.spritecollide(player, boss_bullets, True)
+        if boss_hits:
+            player.lives -= 1
+            lives -= 1
+            if player.lives <= 0:
+                game_over(score)
+
         if (len(enemies) + len(alien_ships)) == 0:
             enemies_spawned = 0
             level += 1
 
-
-#         for enemy in enemies:
-#             if enemy.rect.top > HEIGHT or enemy.rect.right < 0 or enemy.rect.left > WIDTH:
-#                 enemy.kill()
-#                 enemies_killed += 1
-#                 # print(f'Enemy went off-screen. Total enemies killed: {enemies_killed}')  # Debug
-
-#         for alien_ship in alien_ships:
-#             if alien_ship.rect.top > HEIGHT or alien_ship.rect.right < 0 or alien_ship.rect.left > WIDTH:
-#                 alien_ship.kill()
-#                 enemies_killed += 1
-#                 print(f'Alien ship went off-screen. Total enemies killed: {enemies_killed}')  # Debug
-
-# # Ensure no enemies or alien ships are left when counting kills
-#         print(f'Total enemies on screen: {len(enemies) + len(alien_ships)}')  # Debug
 
         # Drawing
         screen.fill((0, 0, 0))
@@ -626,7 +764,9 @@ def main_menu():
         title_rect = title_text.get_rect(center=(WIDTH // 2, HEIGHT // 4))
         screen.blit(title_text, title_rect)
 
-        vertical_gap = 80
+        vertical_gap = 100
+        button_width = 300
+        button_height = 70
 
         single_player_btn = create_button("Single Player", WIDTH // 2, HEIGHT // 2)
         multiplayer_btn = create_button("Multiplayer", WIDTH // 2, HEIGHT // 2 + vertical_gap)
