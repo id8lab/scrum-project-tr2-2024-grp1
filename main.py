@@ -297,7 +297,7 @@ class Enemy(pygame.sprite.Sprite):
         self.rect = self.image.get_rect(topleft=(x, 0))  # Start at the top of the screen
         self.target_y = y  # The designated position
         self.speed_y = random.uniform(0.5, 1.0)
-        self.speed_x = random.uniform(0.8, 1.5)
+        self.speed_x = random.uniform(0.2, 0.5)  # Slower angular speed for circular movement
         self.amplitude = random.uniform(30, 80)
         self.frequency = random.uniform(0.01, 0.03)
         self.start_x = x
@@ -307,30 +307,73 @@ class Enemy(pygame.sprite.Sprite):
         self.oscillate_start_y = random.randint(HEIGHT // 4, HEIGHT // 2)
         self.dropping = True  # Initial state is dropping down
 
+        self.square_move = random.choice([True, False])
+        self.circle_move = random.choice([True, False])
+        self.direction = 'left'  # Initial direction for square movement
+
+        self.radius = random.uniform(100, 200)  # Larger radius for bigger circles
+        self.angle = 0
+        self.center_x = x
+        self.center_y = y
+
     def update(self):
         if self.dropping:
             self.rect.y += self.speed_y
-            if (self.rect.y >= self.target_y):
+            if self.rect.y >= self.target_y:
                 self.rect.y = self.target_y
                 self.dropping = False  # Stop dropping and start normal behavior
         else:
-            if self.horizontal:
-                self.rect.x += self.speed_x
-                if self.rect.left <= 0 or self.rect.right >= WIDTH:
-                    self.speed_x *= -1
+            if self.circle_move:
+                self.move_in_circle()
+            elif self.square_move:
+                self.move_in_square()
             else:
-                if self.rect.y < self.oscillate_start_y:
-                    self.rect.y += self.speed_y
+                if self.horizontal:
+                    self.rect.x += self.speed_x
+                    if self.rect.left <= 0 or self.rect.right >= WIDTH:
+                        self.speed_x *= -1
                 else:
-                    if self.oscillate:
-                        new_x = self.start_x + self.amplitude * math.sin(self.frequency * self.time)
-                        if abs(new_x - self.rect.x) > 1:  # Ensure noticeable movement
-                            self.rect.x = new_x
-                    self.time += 1
+                    if self.rect.y < self.oscillate_start_y:
+                        self.rect.y += self.speed_y
+                    else:
+                        if self.oscillate:
+                            new_x = self.start_x + self.amplitude * math.sin(self.frequency * self.time)
+                            if abs(new_x - self.rect.x) > 1:  # Ensure noticeable movement
+                                self.rect.x = new_x
+                        self.time += 1
 
             # Ensure the enemy stays within the screen boundaries
             self.rect.x = max(0, min(self.rect.x, WIDTH - self.rect.width))
             self.rect.y = max(0, min(self.rect.y, HEIGHT - self.rect.height))
+
+    def move_in_square(self):
+        if self.direction == 'left':
+            self.rect.x -= self.speed_x
+            if self.rect.x <= 0:
+                self.rect.x = 0
+                self.direction = 'up'
+        elif self.direction == 'up':
+            self.rect.y -= self.speed_y
+            if self.rect.y <= 0:
+                self.rect.y = 0
+                self.direction = 'right'
+        elif self.direction == 'right':
+            self.rect.x += self.speed_x
+            if self.rect.x >= WIDTH - self.rect.width:
+                self.rect.x = WIDTH - self.rect.width
+                self.direction = 'down'
+        elif self.direction == 'down':
+            self.rect.y += self.speed_y
+            if self.rect.y >= self.target_y:
+                self.rect.y = self.target_y
+                self.direction = 'left'
+
+    def move_in_circle(self):
+        self.angle += self.speed_x  # Slower angular speed for circular movement
+        self.rect.x = self.center_x + self.radius * math.cos(self.angle)
+        self.rect.y = self.center_y + self.radius * math.sin(self.angle)
+
+
 
 class AlienShip(pygame.sprite.Sprite):
     def __init__(self, x, y):
@@ -345,9 +388,12 @@ class AlienShip(pygame.sprite.Sprite):
         self.start_x = x
         self.time = 0
         self.oscillate = random.choice([True, False])
-        self.horizontal = random.choice([True, False])
+        self.horizontal = True
         self.oscillate_start_y = random.randint(HEIGHT // 4, HEIGHT // 2)
         self.dropping = True  # Initial state is dropping down
+
+        self.square_move = random.choice([True, False])
+        self.direction = 'left'  # Initial direction for square movement
 
     def update(self):
         if self.dropping:
@@ -356,23 +402,49 @@ class AlienShip(pygame.sprite.Sprite):
                 self.rect.y = self.target_y
                 self.dropping = False  # Stop dropping and start normal behavior
         else:
-            if self.horizontal:
-                self.rect.x += self.speed_x
-                if self.rect.left <= 0 or self.rect.right >= WIDTH:
-                    self.speed_x *= -1
+            if self.square_move:
+                self.move_in_square()
             else:
-                if self.rect.y < self.oscillate_start_y:
-                    self.rect.y += self.speed_y
+                if self.horizontal:
+                    self.rect.x += self.speed_x
+                    if self.rect.left <= 0 or self.rect.right >= WIDTH:
+                        self.speed_x *= -1
                 else:
-                    if self.oscillate:
-                        new_x = self.start_x + self.amplitude * math.sin(self.frequency * self.time)
-                        if abs(new_x - self.rect.x) > 1:  # Ensure noticeable movement
-                            self.rect.x = new_x
-                    self.time += 1
+                    if self.rect.y < self.oscillate_start_y:
+                        self.rect.y += self.speed_y
+                    else:
+                        if self.oscillate:
+                            new_x = self.start_x + self.amplitude * math.sin(self.frequency * self.time)
+                            if abs(new_x - self.rect.x) > 1:  # Ensure noticeable movement
+                                self.rect.x = new_x
+                        self.time += 1
 
             # Ensure the alien ship stays within the screen boundaries
             self.rect.x = max(0, min(self.rect.x, WIDTH - self.rect.width))
             self.rect.y = max(0, min(self.rect.y, HEIGHT - self.rect.height))
+
+    def move_in_square(self):
+        if self.direction == 'left':
+            self.rect.x -= self.speed_x
+            if self.rect.x <= 0:
+                self.rect.x = 0
+                self.direction = 'up'
+        elif self.direction == 'up':
+            self.rect.y -= self.speed_y
+            if self.rect.y <= 0:
+                self.rect.y = 0
+                self.direction = 'right'
+        elif self.direction == 'right':
+            self.rect.x += self.speed_x
+            if self.rect.x >= WIDTH - self.rect.width:
+                self.rect.x = WIDTH - self.rect.width
+                self.direction = 'down'
+        elif self.direction == 'down':
+            self.rect.y += self.speed_y
+            if self.rect.y >= self.target_y:
+                self.rect.y = self.target_y
+                self.direction = 'left'
+
 
 
 class Bullet(pygame.sprite.Sprite):
