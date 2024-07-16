@@ -88,11 +88,15 @@ class Star:
 stars = [Star() for _ in range(100)]
 
 # Button function
-def create_button(text, center_x, center_y):
+def create_button(text, center_x, center_y, width=300, height=70):
+    rect = pygame.Rect(0,0, width, height)
+    rect.center = (center_x, center_y)
     text_render = button_font.render(text, True, WHITE)
-    rect = text_render.get_rect(center=(center_x, center_y))
-    pygame.draw.rect(screen, GRAY, rect.inflate(20, 20))
-    screen.blit(text_render, rect)
+    text_rect = text_render.get_rect(center=(center_x, center_y))
+    rect.size = (width, height)
+    pygame.draw.rect(screen, GRAY, rect)
+    pygame.draw.rect(screen, WHITE, rect, 2)
+    screen.blit(text_render, text_rect)
     return rect
 
 # Load weapon supply image
@@ -372,7 +376,6 @@ class Enemy(pygame.sprite.Sprite):
         self.angle += self.speed_x  # Slower angular speed for circular movement
         self.rect.x = self.center_x + self.radius * math.cos(self.angle)
         self.rect.y = self.center_y + self.radius * math.sin(self.angle)
-
 
 
 class AlienShip(pygame.sprite.Sprite):
@@ -761,7 +764,9 @@ def main_menu():
         title_rect = title_text.get_rect(center=(WIDTH // 2, HEIGHT // 4))
         screen.blit(title_text, title_rect)
 
-        vertical_gap = 80
+        vertical_gap = 100
+        button_width = 300
+        button_height = 70
 
         single_player_btn = create_button("Single Player", WIDTH // 2, HEIGHT // 2)
         multiplayer_btn = create_button("Multiplayer", WIDTH // 2, HEIGHT // 2 + vertical_gap)
