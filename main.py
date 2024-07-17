@@ -723,7 +723,7 @@ def main_game():
         screen.blit(score_text, (10, 10))
 
         lives_text = score_font.render(f"Lives: {lives}", True, WHITE)
-        screen.blit(lives_text, (WIDTH - 110, 10))
+        screen.blit(lives_text, (WIDTH - 120, 10))
 
         # Display current level
         level_text = score_font.render(f"Level: {level}", True, WHITE)
