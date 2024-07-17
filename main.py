@@ -458,7 +458,66 @@ def game_over(score):
         pygame.display.flip()
 
 def high_scores_screen():
+    try:
+        retro_font = pygame.font.Font("./assets/8bit_font.ttf", 36)  # Increased font size
+    except:
+        retro_font = pygame.font.Font(None, 36)  # Fallback if custom font fails
+
+    # Load crown image
+    crown_image = pygame.image.load("./assets/crown.png").convert_alpha()
+    crown_image = pygame.transform.scale(crown_image, (35, 35))  # Slightly larger crown
+
+    background = pygame.Surface(screen.get_size())
+    background.fill((0, 0, 0))
     scores = load_scores()
+
+    running = True
+    while running:
+        screen.blit(background, (0, 0))
+
+        title_text = retro_font.render("Galaxia HIGH SCORES", True, YELLOW)
+        title_rect = title_text.get_rect(center=(WIDTH // 2, HEIGHT // 8))
+        screen.blit(title_text, title_rect)
+
+        # Measure text width for centering
+        player_width = retro_font.size("PLAYER")[0]
+        score_width = retro_font.size("SCORE")[0]
+
+        # Calculate columns' positions
+        column_spacing = 100  # Space between the columns
+        player_column_x = (WIDTH - (player_width + score_width + column_spacing)) // 2
+        score_column_x = player_column_x + player_width + column_spacing
+
+        # Draw column titles
+        player_title = retro_font.render("PLAYER", True, (0, 255, 255))
+        score_title = retro_font.render("SCORE", True, (0, 255, 255))
+        screen.blit(player_title, (player_column_x, HEIGHT // 4))
+        screen.blit(score_title, (score_column_x, HEIGHT // 4))
+
+        # List scores
+        for i, score in enumerate(scores):
+            y = HEIGHT // 4 + 50 * (i + 1)  # Adjusted for larger font
+            player_text = retro_font.render(f"Player {i + 1}", True, (0, 255, 255))
+            score_text = retro_font.render(str(score), True, YELLOW)
+            screen.blit(player_text, (player_column_x, y))
+            screen.blit(score_text, (score_column_x, y))
+
+            # Draw crown for top scorer
+            if i == 0:
+                screen.blit(crown_image, (player_column_x - 50, y - 10))  # More left, adjusted position
+
+        # Event handling
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            elif event.type == pygame.KEYDOWN:
+                if event.key is pygame.K_ESCAPE:
+                    running = False
+
+        pygame.display.flip()
+
+def multiplayer_menu():
     running = True
     while running:
         screen.fill((0, 0, 0))
@@ -467,22 +526,14 @@ def high_scores_screen():
             star.move()
             star.draw(screen)
 
-        title_text = font.render("High Scores", True, WHITE)
-        title_rect = title_text.get_rect(center=(WIDTH // 2, HEIGHT // 4))
-        screen.blit(title_text, title_rect)
+        settings_text = font.render("MULTIPLAYER", True, WHITE)
+        settings_rect = settings_text.get_rect(center=(WIDTH // 2, HEIGHT // 3))
+        screen.blit(settings_text, settings_rect)
 
-        for i, score in enumerate(scores):
-            # Render the list number in yellow
-            number_text = score_font.render(f"{i + 1}.", True, YELLOW)
-            number_rect = number_text.get_rect(center=(WIDTH // 2 - 40, HEIGHT // 2 + i * 40))  # Adjust x position for space
-            screen.blit(number_text, number_rect)
-
-            # Render the score in white
-            score_text = score_font.render(f"{score}", True, WHITE)
-            score_rect = score_text.get_rect(center=(WIDTH // 2 + 40, HEIGHT // 2 + i * 40))  # Adjust x position for space
-            screen.blit(score_text, score_rect)
-
-        back_btn = create_button("Back", WIDTH // 2, HEIGHT - 100)
+        vertical_gap = 80
+        server_btn = create_button("Server", WIDTH // 2, HEIGHT // 2)
+        client_btn = create_button("Client", WIDTH // 2, HEIGHT // 2 + vertical_gap)
+        exit_btn = create_button("Back", WIDTH // 2, HEIGHT // 2 + 2 * vertical_gap)
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -490,12 +541,14 @@ def high_scores_screen():
                 sys.exit()
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 mouse_pos = event.pos
-                if back_btn.collidepoint(mouse_pos):
-                    running = False
+                if server_btn.collidepoint(mouse_pos):
+                    print("server")
+                elif client_btn.collidepoint(mouse_pos):
+                    print("client")
+                elif exit_btn.collidepoint(mouse_pos):
+                    main_menu()
 
         pygame.display.flip()
-
-
 def pause_menu(current_score):
     save_score(current_score)
     running = True
@@ -581,9 +634,7 @@ def main_game():
         for sprite in all_sprites:
             if sprite != player:
                 sprite.update()
-
-
-
+                
         # Spawn enemies if needed
         if enemies_spawned < MAX_ENEMIES_PER_WAVE and len(enemies) + len(alien_ships) < MAX_ENEMIES_PER_WAVE and boss_died:
             enemy_type = random.choice(['enemy', 'alien'])
@@ -711,7 +762,7 @@ def main_menu():
                 if single_player_btn.collidepoint(mouse_pos):
                     main_game()
                 elif multiplayer_btn.collidepoint(mouse_pos):
-                    print("Multiplayer button clicked")
+                    multiplayer_menu()
                 elif scores_btn.collidepoint(mouse_pos):
                     high_scores_screen()
                 elif settings_btn.collidepoint(mouse_pos):
