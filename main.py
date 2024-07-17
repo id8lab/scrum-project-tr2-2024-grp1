@@ -45,7 +45,7 @@ for i in range(1, 6):
 
 # Set the default player image
 current_character_index = 0
-player_image = character_images[current_character_index]
+player_image = pygame.transform.scale (character_images[current_character_index], (100, 100))
 enemy_image = pygame.image.load("./assets/enemy.png").convert_alpha()
 enemy_image = pygame.transform.scale(enemy_image, (100, 100))
 alien_ship_image = pygame.image.load("./assets/alien_ships.png").convert_alpha()
