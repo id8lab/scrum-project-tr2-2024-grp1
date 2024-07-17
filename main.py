@@ -40,7 +40,7 @@ explosion_image = pygame.transform.scale(explosion_image, (150, 150))  # Adjust 
 character_images = []
 for i in range(1, 6):
     image = pygame.image.load(f"./assets/character_{i}.png").convert_alpha()
-    image = pygame.transform.scale(image, (50, 50))  # Adjust size as needed
+    image = pygame.transform.scale(image, (100, 100))  # Adjust size as needed
     character_images.append(image)
 
 # Set the default player image
