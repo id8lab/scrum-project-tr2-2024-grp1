@@ -55,9 +55,9 @@ boss_image = pygame.image.load("./assets/enemyboss.png").convert_alpha()
 boss_image = pygame.transform.scale(boss_image, (200, 200))  # Adjust the size as needed
 
 # Font
-font = pygame.font.Font(None, 74)
-button_font = pygame.font.Font(None, 50)
-score_font = pygame.font.Font(None, 36)
+font = pygame.font.Font("./assets/8bit_font.ttf", 74)
+button_font = pygame.font.Font("./assets/8bit_font.ttf", 50)
+score_font = pygame.font.Font("./assets/8bit_font.ttf", 36)
 
 # Sprite groups
 all_sprites = pygame.sprite.Group()
