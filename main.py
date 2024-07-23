@@ -104,22 +104,45 @@ weapon_supply_image = pygame.image.load("./assets/weapon_supply.png").convert_al
 weapon_supply_image = pygame.transform.scale(weapon_supply_image, (80, 80))
 
 # File to store scores
-SCORES_FILE = 'scores.txt'
+import json
 
-def save_score(score):
+SCORES_FILE = 'scores.json'
+
+def save_score(score, player_name="AK"):
+    new_entry = {"score": score, "player_name": player_name}
     try:
-        with open(SCORES_FILE, 'a') as file:
-            file.write(f"{score}\n")
-    except FileNotFoundError:
+        # Read existing scores
+        try:
+            with open(SCORES_FILE, 'r') as file:
+                scores = json.load(file)
+        except FileNotFoundError:
+            scores = []
+
+        # Append new score
+        scores.append(new_entry)
+
+        # Write updated scores back to file
         with open(SCORES_FILE, 'w') as file:
-            file.write(f"{score}\n")
+            json.dump(scores, file)
+    except Exception as e:
+        print(f"An error occurred: {e}")
 
 def load_scores():
     try:
         with open(SCORES_FILE, 'r') as file:
-            scores = [int(line.strip()) for line in file.readlines()]
-            return sorted(scores, reverse=True)[:5]  # Keep only top 5 scores
+            scores = json.load(file)
+            # Convert old int scores to the new format if necessary
+            converted_scores = []
+            for score in scores:
+                if isinstance(score, int):
+                    converted_scores.append({"score": score, "player_name": "Unknown"})
+                else:
+                    converted_scores.append(score)
+            sorted_scores = sorted(converted_scores, key=lambda x: x['score'], reverse=True)[:5]  # Keep only top 5 scores
+            return sorted_scores
     except FileNotFoundError:
+        return []
+    except json.JSONDecodeError:
         return []
 
 def draw_volume_bar(label, volume, pos_x, pos_y):
@@ -207,6 +230,7 @@ def settings_menu():
 
         pygame.display.flip()
 
+print(load_scores())
 
 class EnemyBoss(pygame.sprite.Sprite):
     def __init__(self, x, y):
@@ -497,8 +521,8 @@ def high_scores_screen():
         # List scores
         for i, score in enumerate(scores):
             y = HEIGHT // 4 + 50 * (i + 1)  # Adjusted for larger font
-            player_text = retro_font.render(f"Player {i + 1}", True, (0, 255, 255))
-            score_text = retro_font.render(str(score), True, YELLOW)
+            player_text = retro_font.render(str(score["player_name"]), True, (0, 255, 255))
+            score_text = retro_font.render(str(score["score"]), True, YELLOW)
             screen.blit(player_text, (player_column_x, y))
             screen.blit(score_text, (score_column_x, y))
 
