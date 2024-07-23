@@ -18,6 +18,8 @@ GRAY = (100, 100, 100)
 RED = (255, 0, 0)
 YELLOW = (255, 255, 0)
 
+player_name = ""
+
 # Load background music
 pygame.mixer.music.load("./assets/game.mp3")
 pygame.mixer.music.play(-1)
@@ -108,7 +110,7 @@ import json
 
 SCORES_FILE = 'scores.json'
 
-def save_score(score, player_name="AK"):
+def save_score(score,):
     new_entry = {"score": score, "player_name": player_name}
     try:
         # Read existing scores
@@ -756,22 +758,33 @@ def main_game():
         pygame.display.flip()
 
 def main_menu():
+    global player_name
     running = True
+    input_active = False
+    font = pygame.font.Font(None, 36)
+    title_font = pygame.font.Font(None, 72)
+    input_box = pygame.Rect(WIDTH // 2 - 150, HEIGHT // 4 + 140, 300, 50) 
+
     while running:
         screen.fill((0, 0, 0))
 
-        for star in stars:
-            star.move()
-            star.draw(screen)
-
-        title_text = font.render("Galaxia", True, WHITE)
+        # Title
+        title_text = title_font.render("Galaxia", True, WHITE)
         title_rect = title_text.get_rect(center=(WIDTH // 2, HEIGHT // 4))
         screen.blit(title_text, title_rect)
 
-        vertical_gap = 100
-        button_width = 300
-        button_height = 70
 
+        label_text = font.render("Enter your name", True, WHITE)
+        label_rect = label_text.get_rect(center=(WIDTH // 2, HEIGHT // 4 + 90))
+        screen.blit(label_text, label_rect)
+
+        # Input box
+        pygame.draw.rect(screen, WHITE, input_box, 2)
+        input_text_surface = font.render(player_name, True, WHITE)
+        screen.blit(input_text_surface, (input_box.x + 5, input_box.y + 10))
+
+        # Buttons
+        vertical_gap = 100
         single_player_btn = create_button("Single Player", WIDTH // 2, HEIGHT // 2)
         multiplayer_btn = create_button("Multiplayer", WIDTH // 2, HEIGHT // 2 + vertical_gap)
         scores_btn = create_button("Scores", WIDTH // 2, HEIGHT // 2 + 2 * vertical_gap)
@@ -782,6 +795,11 @@ def main_menu():
             if event.type == pygame.QUIT:
                 running = False
             elif event.type == pygame.MOUSEBUTTONDOWN:
+                if input_box.collidepoint(event.pos):
+                    input_active = True
+                else:
+                    input_active = False
+
                 mouse_pos = event.pos
                 if single_player_btn.collidepoint(mouse_pos):
                     main_game()
@@ -793,12 +811,16 @@ def main_menu():
                     settings_menu()
                 elif exit_btn.collidepoint(mouse_pos):
                     running = False
+            elif event.type == pygame.KEYDOWN and input_active:
+                if event.key == pygame.K_BACKSPACE:
+                    player_name = player_name[:-1]
+                else:
+                    player_name += event.unicode
 
         pygame.display.flip()
 
     pygame.quit()
     sys.exit()
-
 # Sprite groups
 all_sprites = pygame.sprite.Group()
 bullets = pygame.sprite.Group()
