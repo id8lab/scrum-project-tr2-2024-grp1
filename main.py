@@ -110,7 +110,7 @@ import json
 
 SCORES_FILE = 'scores.json'
 
-def save_score(score,):
+def save_score(score):
     new_entry = {"score": score, "player_name": player_name}
     try:
         # Read existing scores
@@ -232,7 +232,6 @@ def settings_menu():
 
         pygame.display.flip()
 
-print(load_scores())
 
 class EnemyBoss(pygame.sprite.Sprite):
     def __init__(self, x, y):
