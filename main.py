@@ -106,21 +106,26 @@ weapon_supply_image = pygame.transform.scale(weapon_supply_image, (80, 80))
 # File to store scores
 SCORES_FILE = 'scores.txt'
 
-def save_score(score):
+def save_score(score, username):
+    """Save the score and username to the scores file."""
     try:
         with open(SCORES_FILE, 'a') as file:
-            file.write(f"{score}\n")
+            file.write(f"{username}:{score}\n")
     except FileNotFoundError:
         with open(SCORES_FILE, 'w') as file:
-            file.write(f"{score}\n")
+            file.write(f"{username}:{score}\n")
 
 def load_scores():
+    """Load scores and sort them in descending order."""
     try:
         with open(SCORES_FILE, 'r') as file:
-            scores = [int(line.strip()) for line in file.readlines()]
-            return sorted(scores, reverse=True)[:5]  # Keep only top 5 scores
+            scores = [line.strip().split(':') for line in file]
+            scores = [(parts[0], int(parts[1])) for parts in scores if len(parts) == 2]
+            return sorted(scores, key=lambda x: x[1], reverse=True)[:5]  # Keep only top 5 scores
     except FileNotFoundError:
         return []
+
+
 
 def draw_volume_bar(label, volume, pos_x, pos_y):
     bar_width = 200
@@ -416,8 +421,8 @@ class WeaponSupply(pygame.sprite.Sprite):
         if self.rect.top > HEIGHT:
             self.kill()
 
-def game_over(score):
-    save_score(score)
+def game_over(score, username):
+    save_score(score, username)
     running = True
     while running:
         screen.fill((0, 0, 0))
@@ -454,18 +459,19 @@ def game_over(score):
                     settings_menu()
                 elif exit_btn.collidepoint(mouse_pos):
                     main_menu()
+                    
 
         pygame.display.flip()
 
 def high_scores_screen():
     try:
-        retro_font = pygame.font.Font("./assets/8bit_font.ttf", 36)  # Increased font size
+        retro_font = pygame.font.Font("./assets/8bit_font.ttf", 36)
     except:
-        retro_font = pygame.font.Font(None, 36)  # Fallback if custom font fails
+        retro_font = pygame.font.Font(None, 36)
 
-    # Load crown image
+    # Load the crown image for the top score
     crown_image = pygame.image.load("./assets/crown.png").convert_alpha()
-    crown_image = pygame.transform.scale(crown_image, (35, 35))  # Slightly larger crown
+    crown_image = pygame.transform.scale(crown_image, (35, 35))  # Adjust size for visibility
 
     background = pygame.Surface(screen.get_size())
     background.fill((0, 0, 0))
@@ -474,8 +480,7 @@ def high_scores_screen():
     running = True
     while running:
         screen.blit(background, (0, 0))
-
-        title_text = retro_font.render("Galaxia HIGH SCORES", True, YELLOW)
+        title_text = retro_font.render("HIGH SCORES", True, YELLOW)
         title_rect = title_text.get_rect(center=(WIDTH // 2, HEIGHT // 8))
         screen.blit(title_text, title_rect)
 
@@ -495,9 +500,9 @@ def high_scores_screen():
         screen.blit(score_title, (score_column_x, HEIGHT // 4))
 
         # List scores
-        for i, score in enumerate(scores):
+        for i, (username, score) in enumerate(scores):
             y = HEIGHT // 4 + 50 * (i + 1)  # Adjusted for larger font
-            player_text = retro_font.render(f"Player {i + 1}", True, (0, 255, 255))
+            player_text = retro_font.render(f"{username}", True, (0, 255, 255))
             score_text = retro_font.render(str(score), True, YELLOW)
             screen.blit(player_text, (player_column_x, y))
             screen.blit(score_text, (score_column_x, y))
@@ -508,14 +513,16 @@ def high_scores_screen():
 
         # Event handling
         for event in pygame.event.get():
-            if event.type == pygame.QUIT:
+            if event.type is pygame.QUIT:
                 pygame.quit()
                 sys.exit()
-            elif event.type == pygame.KEYDOWN:
+            elif event.type is pygame.KEYDOWN:
                 if event.key is pygame.K_ESCAPE:
                     running = False
 
         pygame.display.flip()
+
+
 
 def multiplayer_menu():
     running = True
@@ -549,8 +556,8 @@ def multiplayer_menu():
                     main_menu()
 
         pygame.display.flip()
-def pause_menu(current_score):
-    save_score(current_score)
+def pause_menu(current_score,username):
+    save_score(current_score,username)
     running = True
     while running:
         screen.fill((0, 0, 0))
@@ -583,8 +590,10 @@ def pause_menu(current_score):
 
         pygame.display.flip()
 
+current_username = None
+
 def main_game():
-    global all_sprites, bullets, enemies, alien_ships, explosions, weapon_supplies, boss_bullets, boss
+    global all_sprites, bullets, enemies, alien_ships, explosions, weapon_supplies, boss_bullets, boss, current_username
 
     all_sprites = pygame.sprite.Group()
     bullets = pygame.sprite.Group()
@@ -622,7 +631,7 @@ def main_game():
                 if event.key == pygame.K_SPACE:
                     player.shoot()
                 elif event.key == pygame.K_ESCAPE:
-                    pause_menu(score)
+                    pause_menu(score,current_username)
             elif event.type == weapon_supply_event:
                 weapon_supply = WeaponSupply()
                 all_sprites.add(weapon_supply)
@@ -691,8 +700,7 @@ def main_game():
             player.lives -= 1
             lives -= 1
             if player.lives <= 0:
-                game_over(score)
-                return  # Exit the function to avoid continuing after game over
+                game_over(score, current_username)  # Pass current_username as the second argument
 
         supply_hits = pygame.sprite.spritecollide(player, weapon_supplies, True)
         for supply in supply_hits:
@@ -704,7 +712,7 @@ def main_game():
             player.lives -= 1
             lives -= 1
             if player.lives <= 0:
-                game_over(score)
+                game_over(score, current_username)
 
         if (len(enemies) + len(alien_ships)) == 0:
             enemies_spawned = 0
@@ -731,11 +739,60 @@ def main_game():
 
         pygame.display.flip()
 
+def draw_text_input(prompt, input_box):
+    base_font = pygame.font.Font(None, 32)
+    color_active = pygame.Color('lightskyblue3')
+    color_passive = pygame.Color('gray15')
+    color = color_passive
+    active = False
+    user_text = ''
+
+    while True:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                if input_box.collidepoint(event.pos):
+                    active = not active
+                else:
+                    active = False
+                color = color_active if active else color_passive
+            elif event.type == pygame.KEYDOWN:
+                if active:
+                    if event.key == pygame.K_RETURN:
+                        return user_text
+                    elif event.key == pygame.K_BACKSPACE:
+                        user_text = user_text[:-1]
+                    else:
+                        # Handle general character input
+                        char = event.unicode
+                        if char.isalnum() or char in " .,;:'\"!@#$%^&*()-_+=<>?/|\\[]{}":
+                            user_text += char
+
+        screen.fill((0, 0, 0))
+        for star in stars:
+            star.move()
+            star.draw(screen)
+
+        # Render the prompt with current user input
+        text_surface = base_font.render(prompt + user_text, True, WHITE)
+        input_box.width = max(300, text_surface.get_width() + 10)
+        screen.blit(text_surface, (input_box.x + 5, input_box.y + 5))
+        pygame.draw.rect(screen, color, input_box, 2)
+
+        pygame.display.flip()
+
+
 def main_menu():
+    global current_username  # Use the global variable
     running = True
+    name_entered = False
+    player_name = ""
+    input_box = pygame.Rect(WIDTH // 2 - 150, HEIGHT // 2 - 150, 300, 50)
+
     while running:
         screen.fill((0, 0, 0))
-
         for star in stars:
             star.move()
             star.draw(screen)
@@ -744,36 +801,41 @@ def main_menu():
         title_rect = title_text.get_rect(center=(WIDTH // 2, HEIGHT // 4))
         screen.blit(title_text, title_rect)
 
-        vertical_gap = 100
-        button_width = 300
-        button_height = 70
+        if not name_entered:
+            player_name = draw_text_input("Enter Your Name: ", input_box)
+            current_username = player_name  # Store the entered username globally
+            name_entered = True
 
         single_player_btn = create_button("Single Player", WIDTH // 2, HEIGHT // 2)
-        multiplayer_btn = create_button("Multiplayer", WIDTH // 2, HEIGHT // 2 + vertical_gap)
-        scores_btn = create_button("Scores", WIDTH // 2, HEIGHT // 2 + 2 * vertical_gap)
-        settings_btn = create_button("Settings", WIDTH // 2, HEIGHT // 2 + 3 * vertical_gap)
-        exit_btn = create_button("Exit", WIDTH // 2, HEIGHT // 2 + 4 * vertical_gap)
+        multiplayer_btn = create_button("Multiplayer", WIDTH // 2, HEIGHT // 2 + 100)
+        scores_btn = create_button("Scores", WIDTH // 2, HEIGHT // 2 + 200)
+        settings_btn = create_button("Settings", WIDTH // 2, HEIGHT // 2 + 300)
+        exit_btn = create_button("Exit", WIDTH // 2, HEIGHT // 2 + 400)
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                running = False
+                pygame.quit()
+                sys.exit()
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 mouse_pos = event.pos
-                if single_player_btn.collidepoint(mouse_pos):
-                    main_game()
-                elif multiplayer_btn.collidepoint(mouse_pos):
-                    multiplayer_menu()
-                elif scores_btn.collidepoint(mouse_pos):
-                    high_scores_screen()
-                elif settings_btn.collidepoint(mouse_pos):
-                    settings_menu()
-                elif exit_btn.collidepoint(mouse_pos):
-                    running = False
+                if name_entered:
+                    if single_player_btn.collidepoint(mouse_pos):
+                        main_game()
+                    elif multiplayer_btn.collidepoint(mouse_pos):
+                        multiplayer_menu()
+                    elif scores_btn.collidepoint(mouse_pos):
+                        high_scores_screen()
+                    elif settings_btn.collidepoint(mouse_pos):
+                        settings_menu()
+                    elif exit_btn.collidepoint(mouse_pos):
+                        running = False
 
         pygame.display.flip()
 
     pygame.quit()
     sys.exit()
+
+
 
 # Sprite groups
 all_sprites = pygame.sprite.Group()
