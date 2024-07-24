@@ -777,52 +777,51 @@ def main_menu():
         title_rect = title_text.get_rect(center=(WIDTH // 2, HEIGHT // 4))
         screen.blit(title_text, title_rect)
 
-        # Input label
-        label_text = font.render("Enter your name", True, WHITE)
-        label_rect = label_text.get_rect(center=(WIDTH // 2, HEIGHT // 4 + 90))
-        screen.blit(label_text, label_rect)
+        # # Input label
+        # label_text = font.render("Enter your name", True, WHITE)
+        # label_rect = label_text.get_rect(center=(WIDTH // 2, HEIGHT // 4 + 90))
+        # screen.blit(label_text, label_rect)
 
-        # Input box
-        pygame.draw.rect(screen, WHITE, input_box, 2)
-        input_text_surface = font.render(player_name, True, WHITE)
-        screen.blit(input_text_surface, (input_box.x + 5, input_box.y + 10))
+        # # Input box
+        # pygame.draw.rect(screen, WHITE, input_box, 2)
+        # input_text_surface = font.render(player_name, True, WHITE)
+        # screen.blit(input_text_surface, (input_box.x + 5, input_box.y + 10))
 
         # Display buttons only if player_name has at least 2 characters
-        if len(player_name) >= 2:
-            vertical_gap = 100
-            single_player_btn = create_button("Single Player", WIDTH // 2, HEIGHT // 2)
-            multiplayer_btn = create_button("Multiplayer", WIDTH // 2, HEIGHT // 2 + vertical_gap)
-            scores_btn = create_button("Scores", WIDTH // 2, HEIGHT // 2 + 2 * vertical_gap)
-            settings_btn = create_button("Settings", WIDTH // 2, HEIGHT // 2 + 3 * vertical_gap)
-            exit_btn = create_button("Exit", WIDTH // 2, HEIGHT // 2 + 4 * vertical_gap)
+        vertical_gap = 100
+        single_player_btn = create_button("Single Player", WIDTH // 2, HEIGHT // 2)
+        multiplayer_btn = create_button("Multiplayer", WIDTH // 2, HEIGHT // 2 + vertical_gap)
+        scores_btn = create_button("Scores", WIDTH // 2, HEIGHT // 2 + 2 * vertical_gap)
+        settings_btn = create_button("Settings", WIDTH // 2, HEIGHT // 2 + 3 * vertical_gap)
+        exit_btn = create_button("Exit", WIDTH // 2, HEIGHT // 2 + 4 * vertical_gap)
 
             # Handle button clicks
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
                     running = False
-                elif event.type == pygame.MOUSEBUTTONDOWN:
-                    if input_box.collidepoint(event.pos):
-                        input_active = True
-                    else:
-                        input_active = False
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                if input_box.collidepoint(event.pos):
+                    input_active = True
+                else:
+                    input_active = False
 
-                    mouse_pos = event.pos
-                    if single_player_btn.collidepoint(mouse_pos):
-                        main_game()
-                    elif multiplayer_btn.collidepoint(mouse_pos):
-                        multiplayer_menu()
-                    elif scores_btn.collidepoint(mouse_pos):
-                        high_scores_screen()
-                    elif settings_btn.collidepoint(mouse_pos):
-                        settings_menu()
-                    elif exit_btn.collidepoint(mouse_pos):
-                        running = False
-                elif event.type == pygame.KEYDOWN:
-                    if input_active:
-                        if event.key == pygame.K_BACKSPACE:
-                            player_name = player_name[:-1]
-                        else:
-                            player_name += event.unicode
+                mouse_pos = event.pos
+                if single_player_btn.collidepoint(mouse_pos):
+                    main_game()
+                elif multiplayer_btn.collidepoint(mouse_pos):
+                    multiplayer_menu()
+                elif scores_btn.collidepoint(mouse_pos):
+                    high_scores_screen()
+                elif settings_btn.collidepoint(mouse_pos):
+                    settings_menu()
+                elif exit_btn.collidepoint(mouse_pos):
+                    running = False
+            elif event.type == pygame.KEYDOWN:
+                if input_active:
+                    if event.key == pygame.K_BACKSPACE:
+                        player_name = player_name[:-1]
+                    else:
+                        player_name += event.unicode
 
         else:
             # Handle input events only when player_name has less than 2 characters
