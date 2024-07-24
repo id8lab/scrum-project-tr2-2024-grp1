@@ -7,10 +7,13 @@ import json
 # Initialize Pygame here
 pygame.init()
 
-# Set fullscreen windowed mode
-screen = pygame.display.set_mode((0, 0), pygame.NOFRAME)
-WIDTH, HEIGHT = screen.get_size()  # This will fetch the resolution of the display
+# Set the game to use the desktop resolution in a borderless windowed fullscreen
+info = pygame.display.Info()  # Get current display info
+screen = pygame.display.set_mode((info.current_w, info.current_h), pygame.NOFRAME)
+WIDTH, HEIGHT = info.current_w, info.current_h  # Set width and height to the screen size
+
 pygame.display.set_caption("Galaxia")
+
 
 # Colors
 WHITE = (255, 255, 255)
@@ -88,6 +91,28 @@ class Star:
 
 # Create a list of stars
 stars = [Star() for _ in range(100)]
+
+def display_settings_menu():
+    global screen, WIDTH, HEIGHT
+    running = True
+    while running:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            # Example event handling for resolution change
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_f:  # Press 'F' for fullscreen toggle
+                    screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
+                    WIDTH, HEIGHT = screen.get_size()
+                elif event.key == pygame.K_w:  # Press 'W' for windowed mode
+                    WIDTH, HEIGHT = 1280, 720  # Set default windowed mode resolution
+                    screen = pygame.display.set_mode((WIDTH, HEIGHT))
+
+        # Redraw the settings menu, etc.
+        pygame.display.flip()
+
+# Add a call to this menu in your game loop or settings menu
 
 # Button function
 def create_button(text, center_x, center_y, width=300, height=70):
