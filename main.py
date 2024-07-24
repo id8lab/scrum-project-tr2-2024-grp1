@@ -7,9 +7,9 @@ import json
 # Initialize Pygame here
 pygame.init()
 
-# Screen dimensions
-screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
-WIDTH, HEIGHT = screen.get_size()
+# Set fullscreen windowed mode
+screen = pygame.display.set_mode((0, 0), pygame.NOFRAME)
+WIDTH, HEIGHT = screen.get_size()  # This will fetch the resolution of the display
 pygame.display.set_caption("Galaxia")
 
 # Colors
