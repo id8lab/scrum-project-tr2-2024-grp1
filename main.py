@@ -531,16 +531,21 @@ def high_scores_screen():
             if i == 0:
                 screen.blit(crown_image, (player_column_x - 50, y - 10))  # More left, adjusted position
 
+        # Create "Back" button
+        exit_btn = create_button("Back", WIDTH // 2, HEIGHT // 2 + 300)
+
         # Event handling
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
                 sys.exit()
-            elif event.type == pygame.KEYDOWN:
-                if event.key is pygame.K_ESCAPE:
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                mouse_pos = event.pos
+                if exit_btn.collidepoint(mouse_pos):
                     running = False
-
+        
         pygame.display.flip()
+
 
 def multiplayer_menu():
     running = True
