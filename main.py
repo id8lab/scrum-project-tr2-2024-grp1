@@ -110,24 +110,25 @@ import json
 
 SCORES_FILE = 'scores.json'
 
-def save_score(score):
+
+def save_score(player_name, score):
     new_entry = {"score": score, "player_name": player_name}
     try:
-        # Read existing scores
+        # Initialize scores list if the file does not exist or is empty
         try:
             with open(SCORES_FILE, 'r') as file:
                 scores = json.load(file)
-        except FileNotFoundError:
+        except (FileNotFoundError, json.JSONDecodeError):
             scores = []
 
-        # Append new score
+        # Append new score and write back
         scores.append(new_entry)
-
-        # Write updated scores back to file
         with open(SCORES_FILE, 'w') as file:
-            json.dump(scores, file)
+            json.dump(scores, file, indent=4)
+        print(f"Score saved: {new_entry}")  # Debug print
     except Exception as e:
         print(f"An error occurred: {e}")
+
 
 def load_scores():
     try:
@@ -140,12 +141,13 @@ def load_scores():
                     converted_scores.append({"score": score, "player_name": "Unknown"})
                 else:
                     converted_scores.append(score)
-            sorted_scores = sorted(converted_scores, key=lambda x: x['score'], reverse=True)[:5]  # Keep only top 5 scores
+            sorted_scores = sorted(converted_scores, key=lambda x: x['score'], reverse=True)[:5]
+            print(f"Scores loaded: {sorted_scores}")  # Debug print
             return sorted_scores
-    except FileNotFoundError:
+    except (FileNotFoundError, json.JSONDecodeError):
         return []
-    except json.JSONDecodeError:
-        return []
+
+
 
 def draw_volume_bar(label, volume, pos_x, pos_y):
     bar_width = 200
@@ -442,7 +444,23 @@ class WeaponSupply(pygame.sprite.Sprite):
             self.kill()
 
 def game_over(score):
-    save_score(score)
+    player_name = ""  # Initialize player_name here
+    base_font = pygame.font.Font("./assets/8bit_font.ttf", 32)  # Font for name input
+    prompt_font = pygame.font.Font("./assets/8bit_font.ttf", 36)  # Font for the prompt text
+
+    # Define vertical positions
+    input_box_y = HEIGHT // 2 + 50
+    name_prompt_y = input_box_y - 40
+    button_start_y = HEIGHT // 2 + 150
+    vertical_gap = 80
+
+    # Define the input box and prompt
+    input_box = pygame.Rect(WIDTH // 2 - 100, input_box_y, 200, 32)
+    color_inactive = pygame.Color('lightskyblue3')
+    color_active = pygame.Color('dodgerblue2')
+    color = color_inactive
+    input_active = False
+
     running = True
     while running:
         screen.fill((0, 0, 0))
@@ -459,17 +477,32 @@ def game_over(score):
         score_rect = score_text.get_rect(center=(WIDTH // 2, HEIGHT // 3 + 70))
         screen.blit(score_text, score_rect)
 
-        vertical_gap = 80
-        replay_btn = create_button("Replay", WIDTH // 2, HEIGHT // 2)
-        scores_btn = create_button("Scores", WIDTH // 2, HEIGHT // 2 + vertical_gap)
-        settings_btn = create_button("Settings", WIDTH // 2, HEIGHT // 2 + 2 * vertical_gap)
-        exit_btn = create_button("Exit", WIDTH // 2, HEIGHT // 2 + 3 * vertical_gap)
+        # Adjust position of name input prompt and box
+        name_prompt = prompt_font.render("Enter your name:", True, WHITE)
+        name_prompt_rect = name_prompt.get_rect(center=(WIDTH // 2, name_prompt_y))  # Center horizontally
+        screen.blit(name_prompt, name_prompt_rect)
+        pygame.draw.rect(screen, color, input_box, 2)
+        name_surface = base_font.render(player_name, True, WHITE)
+        screen.blit(name_surface, (input_box.x + 5, input_box.y + 5))
+        input_box.w = max(200, name_surface.get_width() + 10)
+
+        # Adjust button positions
+        replay_btn = create_button("Replay", WIDTH // 2, button_start_y)
+        scores_btn = create_button("Scores", WIDTH // 2, button_start_y + vertical_gap)
+        settings_btn = create_button("Settings", WIDTH // 2, button_start_y + 2 * vertical_gap)
+        exit_btn = create_button("Exit", WIDTH // 2, button_start_y + 3 * vertical_gap)
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
                 sys.exit()
             elif event.type == pygame.MOUSEBUTTONDOWN:
+                if input_box.collidepoint(event.pos):
+                    input_active = not input_active
+                else:
+                    input_active = False
+                color = color_active if input_active else color_inactive
+
                 mouse_pos = event.pos
                 if replay_btn.collidepoint(mouse_pos):
                     main_game()
@@ -478,9 +511,23 @@ def game_over(score):
                 elif settings_btn.collidepoint(mouse_pos):
                     settings_menu()
                 elif exit_btn.collidepoint(mouse_pos):
+                    if player_name:  # Save only if name is entered
+                        save_score(player_name, score)
                     main_menu()
+            elif event.type == pygame.KEYDOWN:
+                if input_active:
+                    if event.key == pygame.K_RETURN:
+                        if player_name:  # Save only if name is entered
+                            save_score(player_name, score)
+                        input_active = False
+                        color = color_inactive
+                    elif event.key == pygame.K_BACKSPACE:
+                        player_name = player_name[:-1]
+                    else:
+                        player_name += event.unicode
 
         pygame.display.flip()
+
 
 def high_scores_screen():
     try:
@@ -545,6 +592,7 @@ def high_scores_screen():
                     running = False
         
         pygame.display.flip()
+
 
 
 def multiplayer_menu():
@@ -783,9 +831,7 @@ def main_menu():
         # screen.blit(label_text, label_rect)
 
         # # Input box
-        # pygame.draw.rect(screen, WHITE, input_box, 2)
-        # input_text_surface = font.render(player_name, True, WHITE)
-        # screen.blit(input_text_surface, (input_box.x + 5, input_box.y + 10))
+        
 
         # Display buttons only if player_name has at least 2 characters
         vertical_gap = 100
