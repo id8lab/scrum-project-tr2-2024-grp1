@@ -74,7 +74,7 @@ class Star:
     def __init__(self):
         self.x = random.randint(0, WIDTH)
         self.y = random.randint(0, HEIGHT)
-        self.speed = random.uniform(1, 1)
+        self.speed = random.uniform(0.5, 0.5)
         self.size = random.randint(1, 3)
 
     def move(self):
@@ -813,8 +813,7 @@ def main_menu():
     global player_name
     running = True
     input_active = False
-    font = pygame.font.Font(None, 36)
-    title_font = pygame.font.Font(None, 72)
+    title_font = pygame.font.Font("./assets/8bit_font.ttf", 72)
     input_box = pygame.Rect(WIDTH // 2 - 150, HEIGHT // 4 + 140, 300, 50) 
 
     while running:
