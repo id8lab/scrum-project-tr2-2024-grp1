@@ -628,8 +628,24 @@ def multiplayer_menu():
 
         pygame.display.flip()
 def pause_menu(current_score):
-    save_score(current_score)
+    # save_score(current_score)
     running = True
+    player_name = ""  # Initialize player_name here
+    base_font = pygame.font.Font("./assets/8bit_font.ttf", 32)  # Font for name input
+    prompt_font = pygame.font.Font("./assets/8bit_font.ttf", 36)  # Font for the prompt text
+
+    # Define vertical positions
+    input_box_y = HEIGHT // 2 + 50
+    name_prompt_y = input_box_y - 40
+    button_start_y = HEIGHT // 2 + 150
+    vertical_gap = 80
+
+    # Define the input box and prompt
+    input_box = pygame.Rect(WIDTH // 2 - 100, input_box_y, 200, 32)
+    color_inactive = pygame.Color('lightskyblue3')
+    color_active = pygame.Color('dodgerblue2')
+    color = color_inactive
+    input_active = False
     while running:
         screen.fill((0, 0, 0))
 
@@ -641,23 +657,54 @@ def pause_menu(current_score):
         settings_rect = settings_text.get_rect(center=(WIDTH // 2, HEIGHT // 3))
         screen.blit(settings_text, settings_rect)
 
-        vertical_gap = 80
-        resume_btn = create_button("Resume", WIDTH // 2, HEIGHT // 2)
-        settings_btn = create_button("Settings", WIDTH // 2, HEIGHT // 2 + vertical_gap)
-        exit_btn = create_button("Exit", WIDTH // 2, HEIGHT // 2 + 2 * vertical_gap)
 
+        score_text = font.render("Your Score is " + str(current_score), True, YELLOW)
+        score_rect = score_text.get_rect(center=(WIDTH // 2, HEIGHT // 3 + 70))
+        screen.blit(score_text, score_rect)
+
+        name_prompt = prompt_font.render("Enter your name:", True, WHITE)
+        name_prompt_rect = name_prompt.get_rect(center=(WIDTH // 2, name_prompt_y))  # Center horizontally
+        screen.blit(name_prompt, name_prompt_rect)
+        pygame.draw.rect(screen, color, input_box, 2)
+        name_surface = base_font.render(player_name, True, WHITE)
+        screen.blit(name_surface, (input_box.x + 5, input_box.y + 5))
+        input_box.w = max(200, name_surface.get_width() + 10)
+
+        # Adjust button positions
+        resume_btn = create_button("Resume", WIDTH // 2, button_start_y)
+        settings_btn = create_button("Settings", WIDTH // 2, button_start_y + 1 * vertical_gap)
+        exit_btn = create_button("Exit", WIDTH // 2, button_start_y + 2 * vertical_gap)
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
                 sys.exit()
             elif event.type == pygame.MOUSEBUTTONDOWN:
+                if input_box.collidepoint(event.pos):
+                    input_active = not input_active
+                else:
+                    input_active = False
+                color = color_active if input_active else color_inactive
                 mouse_pos = event.pos
                 if resume_btn.collidepoint(mouse_pos):
                     running = False
                 elif settings_btn.collidepoint(mouse_pos):
                     settings_menu()
                 elif exit_btn.collidepoint(mouse_pos):
+                    if player_name:
+                        save_score(player_name, current_score)
                     main_menu()
+            elif event.type == pygame.KEYDOWN:
+                if input_active:
+                    if event.key == pygame.K_RETURN:
+                        if player_name:  # Save only if name is entered
+                            save_score(player_name, current_score)
+                        input_active = False
+                        color = color_inactive
+                    elif event.key == pygame.K_BACKSPACE:
+                        player_name = player_name[:-1]
+                    else:
+                        player_name += event.unicode
+
 
         pygame.display.flip()
 
