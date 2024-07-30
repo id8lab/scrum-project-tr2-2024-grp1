@@ -822,18 +822,19 @@ def main_game():
             explosion_sound.play()
             print(f'Alien ship killed. Total enemies killed: {enemies_killed}')  # Debug
 
-        boss_killed = pygame.sprite.spritecollide(boss, bullets, True)
-        if boss_killed and not boss_died:
-            boss_hit_count += 1  
-            if boss_hit_count > 5:
-                for hit in boss_killed:
-                    score += 10 
-                    explosion = Explosion(hit.rect.centerx, hit.rect.centery)
-                    all_sprites.add(explosion)
-                    explosions.add(explosion)
-                    explosion_sound.play()
-                    boss.kill()
-                    boss_died = True
+        if not boss_died:
+            boss_killed = pygame.sprite.spritecollide(boss, bullets, True)
+            if boss_killed:
+                boss_hit_count += 1  
+                if boss_hit_count > 5:
+                    for hit in boss_killed:
+                        score += 10 
+                        explosion = Explosion(hit.rect.centerx, hit.rect.centery)
+                        all_sprites.add(explosion)
+                        explosions.add(explosion)
+                        explosion_sound.play()
+                        boss.kill()
+                        boss_died = True
 
 
         enemy_hits = pygame.sprite.spritecollide(player, enemies, True)
