@@ -461,10 +461,15 @@ def game_over(score):
     color = color_inactive
     input_active = False
 
+    # Timer for cursor blinking
+    cursor_blink_timer = pygame.time.get_ticks()
+    cursor_blink_interval = 500  # Cursor blinks every 500 milliseconds
+
     # Load scores and determine rank
     scores = load_scores()
     current_rank = None
     if scores:
+        # Corrected line
         sorted_scores = sorted(scores + [{"player_name": "current", "score": score}], key=lambda x: x['score'], reverse=True)
         current_rank = sorted_scores.index({"player_name": "current", "score": score}) + 1
 
@@ -494,9 +499,18 @@ def game_over(score):
         name_prompt_rect = name_prompt.get_rect(center=(WIDTH // 2, name_prompt_y))  # Center horizontally
         screen.blit(name_prompt, name_prompt_rect)
         pygame.draw.rect(screen, color, input_box, 2)
+
+        # Render the player_name
         name_surface = base_font.render(player_name, True, WHITE)
         screen.blit(name_surface, (input_box.x + 5, input_box.y + 5))
         input_box.w = max(200, name_surface.get_width() + 10)
+
+        # Cursor blinking logic
+        now = pygame.time.get_ticks()
+        if not input_active and not player_name and (now - cursor_blink_timer) % (2 * cursor_blink_interval) < cursor_blink_interval:
+            cursor_x = input_box.x + name_surface.get_width() + 5
+            cursor_y = input_box.y + 5
+            pygame.draw.line(screen, WHITE, (cursor_x, cursor_y), (cursor_x, cursor_y + 24), 2)
 
         # Adjust button positions
         replay_btn = create_button("Replay", WIDTH // 2, button_start_y)
@@ -510,10 +524,11 @@ def game_over(score):
                 sys.exit()
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 if input_box.collidepoint(event.pos):
-                    input_active = not input_active
+                    input_active = True
+                    color = color_active
                 else:
                     input_active = False
-                color = color_active if input_active else color_inactive
+                    color = color_inactive
 
                 mouse_pos = event.pos
                 if replay_btn.collidepoint(mouse_pos):
@@ -539,6 +554,9 @@ def game_over(score):
                         player_name += event.unicode
 
         pygame.display.flip()
+
+
+
 
 
 def high_scores_screen():
@@ -660,6 +678,9 @@ def pause_menu(current_score):
     color = color_inactive
     input_active = False
 
+    cursor_blink_timer = pygame.time.get_ticks()
+    cursor_blink_interval = 500  # Cursor blinks every 500 milliseconds
+
     # Load scores and determine rank
     scores = load_scores()
     current_rank = None
@@ -682,6 +703,7 @@ def pause_menu(current_score):
         score_rect = score_text.get_rect(center=(WIDTH // 2, HEIGHT // 3 + 70))
         screen.blit(score_text, score_rect)
 
+
         if current_rank is not None:
             rank_text = font.render(f"Your Rank is {current_rank}", True, YELLOW)
             rank_rect = rank_text.get_rect(center=(WIDTH // 2, HEIGHT // 3 + 120))
@@ -694,6 +716,12 @@ def pause_menu(current_score):
         name_surface = base_font.render(player_name, True, WHITE)
         screen.blit(name_surface, (input_box.x + 5, input_box.y + 5))
         input_box.w = max(200, name_surface.get_width() + 10)
+
+        now = pygame.time.get_ticks()
+        if not input_active and not player_name and (now - cursor_blink_timer) % (2 * cursor_blink_interval) < cursor_blink_interval:
+            cursor_x = input_box.x + name_surface.get_width() + 5
+            cursor_y = input_box.y + 5
+            pygame.draw.line(screen, WHITE, (cursor_x, cursor_y), (cursor_x, cursor_y + 24), 2)
 
         # Adjust button positions
         resume_btn = create_button("Resume", WIDTH // 2, button_start_y)
