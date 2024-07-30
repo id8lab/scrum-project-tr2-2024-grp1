@@ -642,7 +642,6 @@ def multiplayer_menu():
 
 
 def pause_menu(current_score):
-    # save_score(current_score)
     running = True
     player_name = ""  # Initialize player_name here
     base_font = pygame.font.Font("./assets/8bit_font.ttf", 32)  # Font for name input
@@ -660,6 +659,14 @@ def pause_menu(current_score):
     color_active = pygame.Color('dodgerblue2')
     color = color_inactive
     input_active = False
+
+    # Load scores and determine rank
+    scores = load_scores()
+    current_rank = None
+    if scores:
+        sorted_scores = sorted(scores + [{"player_name": "current", "score": current_score}], key=lambda x: x['score'], reverse=True)
+        current_rank = sorted_scores.index({"player_name": "current", "score": current_score}) + 1
+
     while running:
         screen.fill((0, 0, 0))
 
@@ -671,13 +678,17 @@ def pause_menu(current_score):
         settings_rect = settings_text.get_rect(center=(WIDTH // 2, HEIGHT // 3))
         screen.blit(settings_text, settings_rect)
 
-
-        score_text = font.render("Your Score is " + str(current_score), True, YELLOW)
+        score_text = font.render(f"Your Score is {current_score}", True, YELLOW)
         score_rect = score_text.get_rect(center=(WIDTH // 2, HEIGHT // 3 + 70))
         screen.blit(score_text, score_rect)
 
+        if current_rank is not None:
+            rank_text = font.render(f"Your Rank is {current_rank}", True, YELLOW)
+            rank_rect = rank_text.get_rect(center=(WIDTH // 2, HEIGHT // 3 + 120))
+            screen.blit(rank_text, rank_rect)
+
         name_prompt = prompt_font.render("Enter your name:", True, WHITE)
-        name_prompt_rect = name_prompt.get_rect(center=(WIDTH // 2, name_prompt_y))  # Center horizontally
+        name_prompt_rect = name_prompt.get_rect(center=(WIDTH // 2, name_prompt_y))
         screen.blit(name_prompt, name_prompt_rect)
         pygame.draw.rect(screen, color, input_box, 2)
         name_surface = base_font.render(player_name, True, WHITE)
@@ -688,6 +699,7 @@ def pause_menu(current_score):
         resume_btn = create_button("Resume", WIDTH // 2, button_start_y)
         settings_btn = create_button("Settings", WIDTH // 2, button_start_y + 1 * vertical_gap)
         exit_btn = create_button("Exit", WIDTH // 2, button_start_y + 2 * vertical_gap)
+
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
@@ -719,8 +731,8 @@ def pause_menu(current_score):
                     else:
                         player_name += event.unicode
 
-
         pygame.display.flip()
+
 
 def main_game():
     global all_sprites, bullets, enemies, alien_ships, explosions, weapon_supplies, boss_bullets, boss
