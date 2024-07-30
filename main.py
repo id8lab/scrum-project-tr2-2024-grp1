@@ -461,6 +461,13 @@ def game_over(score):
     color = color_inactive
     input_active = False
 
+    # Load scores and determine rank
+    scores = load_scores()
+    current_rank = None
+    if scores:
+        sorted_scores = sorted(scores + [{"player_name": "current", "score": score}], key=lambda x: x['score'], reverse=True)
+        current_rank = sorted_scores.index({"player_name": "current", "score": score}) + 1
+
     running = True
     while running:
         screen.fill((0, 0, 0))
@@ -473,9 +480,14 @@ def game_over(score):
         settings_rect = settings_text.get_rect(center=(WIDTH // 2, HEIGHT // 3))
         screen.blit(settings_text, settings_rect)
 
-        score_text = font.render("Your Score is " + str(score), True, YELLOW)
+        score_text = font.render(f"Your Score is {score}", True, YELLOW)
         score_rect = score_text.get_rect(center=(WIDTH // 2, HEIGHT // 3 + 70))
         screen.blit(score_text, score_rect)
+
+        if current_rank is not None:
+            rank_text = font.render(f"Your Rank is {current_rank}", True, YELLOW)
+            rank_rect = rank_text.get_rect(center=(WIDTH // 2, HEIGHT // 3 + 150))
+            screen.blit(rank_text, rank_rect)
 
         # Adjust position of name input prompt and box
         name_prompt = prompt_font.render("Enter your name:", True, WHITE)
@@ -627,6 +639,8 @@ def multiplayer_menu():
                     main_menu()
 
         pygame.display.flip()
+
+
 def pause_menu(current_score):
     # save_score(current_score)
     running = True
