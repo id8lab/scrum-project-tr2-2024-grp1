@@ -8,7 +8,7 @@ import json
 pygame.init()
 
 # Screen dimensions
-screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
+screen = pygame.display.set_mode((0, 0), pygame.RESIZABLE)
 WIDTH, HEIGHT = screen.get_size()
 pygame.display.set_caption("Galaxia")
 
@@ -452,7 +452,6 @@ def game_over(score):
     input_box_y = HEIGHT // 2 + 50
     name_prompt_y = input_box_y - 40
     button_start_y = HEIGHT // 2 + 150
-    vertical_gap = 80
 
     # Define the input box and prompt
     input_box = pygame.Rect(WIDTH // 2 - 100, input_box_y, 200, 32)
@@ -513,9 +512,75 @@ def game_over(score):
             pygame.draw.line(screen, WHITE, (cursor_x, cursor_y), (cursor_x, cursor_y + 24), 2)
 
         # Adjust button positions
+        done_btn = create_button("Done", WIDTH // 2, button_start_y)
+
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                if input_box.collidepoint(event.pos):
+                    input_active = True
+                    color = color_active
+                else:
+                    input_active = False
+                    color = color_inactive
+
+                mouse_pos = event.pos
+                if done_btn.collidepoint(mouse_pos):
+                    if player_name:  # Save only if name is entered
+                        save_score(player_name, score)
+                        running=False
+                        game_over_menu()
+            elif event.type == pygame.KEYDOWN:
+                if input_active:
+                    if event.key == pygame.K_RETURN:
+                        if player_name:  # Save only if name is entered
+                            save_score(player_name, score)
+                        input_active = False
+                        color = color_inactive
+                    elif event.key == pygame.K_BACKSPACE:
+                        player_name = player_name[:-1]
+                    else:
+                        player_name += event.unicode
+
+        pygame.display.flip()
+
+
+def game_over_menu():
+    base_font = pygame.font.Font("./assets/8bit_font.ttf", 32)  # Font for name input
+    prompt_font = pygame.font.Font("./assets/8bit_font.ttf", 36)  # Font for the prompt text
+
+    # Define vertical positions
+    input_box_y = HEIGHT // 2 + 50
+    name_prompt_y = input_box_y - 40
+    button_start_y = HEIGHT // 2 + 150
+    vertical_gap = 80
+
+    # Define the input box and prompt
+    input_box = pygame.Rect(WIDTH // 2 - 100, input_box_y, 200, 32)
+    color_inactive = pygame.Color('lightskyblue3')
+    color_active = pygame.Color('dodgerblue2')
+    color = color_inactive
+    input_active = False
+
+    running = True
+    while running:
+        screen.fill((0, 0, 0))
+
+        for star in stars:
+            star.move()
+            star.draw(screen)
+                
+        settings_text = font.render("GAME OVER", True, WHITE)
+        settings_rect = settings_text.get_rect(center=(WIDTH // 2, HEIGHT // 3))
+        screen.blit(settings_text, settings_rect)
+
+
+        # Adjust button positions
         replay_btn = create_button("Replay", WIDTH // 2, button_start_y)
         scores_btn = create_button("Scores", WIDTH // 2, button_start_y + vertical_gap)
-        settings_btn = create_button("Settings", WIDTH // 2, button_start_y + 2 * vertical_gap)
         exit_btn = create_button("Exit", WIDTH // 2, button_start_y + 3 * vertical_gap)
 
         for event in pygame.event.get():
@@ -535,11 +600,7 @@ def game_over(score):
                     main_game()
                 elif scores_btn.collidepoint(mouse_pos):
                     high_scores_screen()
-                elif settings_btn.collidepoint(mouse_pos):
-                    settings_menu()
                 elif exit_btn.collidepoint(mouse_pos):
-                    if player_name:  # Save only if name is entered
-                        save_score(player_name, score)
                     main_menu()
             elif event.type == pygame.KEYDOWN:
                 if input_active:
@@ -554,9 +615,6 @@ def game_over(score):
                         player_name += event.unicode
 
         pygame.display.flip()
-
-
-
 
 
 def high_scores_screen():
