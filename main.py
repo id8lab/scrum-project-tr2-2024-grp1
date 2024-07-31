@@ -668,7 +668,7 @@ def pause_menu(current_score):
     # Define vertical positions
     input_box_y = HEIGHT // 2 + 50
     name_prompt_y = input_box_y - 40
-    button_start_y = HEIGHT // 2 + 150
+    button_start_y = HEIGHT // 2 + 100
     vertical_gap = 80
 
     # Define the input box and prompt
@@ -704,29 +704,29 @@ def pause_menu(current_score):
         screen.blit(score_text, score_rect)
 
 
-        if current_rank is not None:
-            rank_text = font.render(f"Your Rank is {current_rank}", True, YELLOW)
-            rank_rect = rank_text.get_rect(center=(WIDTH // 2, HEIGHT // 3 + 120))
-            screen.blit(rank_text, rank_rect)
+        # if current_rank is not None:
+        #     rank_text = font.render(f"Your Rank is {current_rank}", True, YELLOW)
+        #     rank_rect = rank_text.get_rect(center=(WIDTH // 2, HEIGHT // 3 + 120))
+        #     screen.blit(rank_text, rank_rect)
 
-        name_prompt = prompt_font.render("Enter your name:", True, WHITE)
-        name_prompt_rect = name_prompt.get_rect(center=(WIDTH // 2, name_prompt_y))
-        screen.blit(name_prompt, name_prompt_rect)
-        pygame.draw.rect(screen, color, input_box, 2)
-        name_surface = base_font.render(player_name, True, WHITE)
-        screen.blit(name_surface, (input_box.x + 5, input_box.y + 5))
-        input_box.w = max(200, name_surface.get_width() + 10)
+        # name_prompt = prompt_font.render("Enter your name:", True, WHITE)
+        # name_prompt_rect = name_prompt.get_rect(center=(WIDTH // 2, name_prompt_y))
+        # screen.blit(name_prompt, name_prompt_rect)
+        # pygame.draw.rect(screen, color, input_box, 2)
+        # name_surface = base_font.render(player_name, True, WHITE)
+        # screen.blit(name_surface, (input_box.x + 5, input_box.y + 5))
+        # input_box.w = max(200, name_surface.get_width() + 10)
 
-        now = pygame.time.get_ticks()
-        if not input_active and not player_name and (now - cursor_blink_timer) % (2 * cursor_blink_interval) < cursor_blink_interval:
-            cursor_x = input_box.x + name_surface.get_width() + 5
-            cursor_y = input_box.y + 5
-            pygame.draw.line(screen, WHITE, (cursor_x, cursor_y), (cursor_x, cursor_y + 24), 2)
+        # now = pygame.time.get_ticks()
+        # if not input_active and not player_name and (now - cursor_blink_timer) % (2 * cursor_blink_interval) < cursor_blink_interval:
+        #     cursor_x = input_box.x + name_surface.get_width() + 5
+        #     cursor_y = input_box.y + 5
+        #     pygame.draw.line(screen, WHITE, (cursor_x, cursor_y), (cursor_x, cursor_y + 24), 2)
 
         # Adjust button positions
         resume_btn = create_button("Resume", WIDTH // 2, button_start_y)
-        settings_btn = create_button("Settings", WIDTH // 2, button_start_y + 1 * vertical_gap)
-        exit_btn = create_button("Exit", WIDTH // 2, button_start_y + 2 * vertical_gap)
+        # settings_btn = create_button("Settings", WIDTH // 2, button_start_y + 1 * vertical_gap)
+        exit_btn = create_button("Exit", WIDTH // 2, button_start_y + 1 * vertical_gap)
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -741,8 +741,6 @@ def pause_menu(current_score):
                 mouse_pos = event.pos
                 if resume_btn.collidepoint(mouse_pos):
                     running = False
-                elif settings_btn.collidepoint(mouse_pos):
-                    settings_menu()
                 elif exit_btn.collidepoint(mouse_pos):
                     if player_name:
                         save_score(player_name, current_score)
