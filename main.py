@@ -745,31 +745,21 @@ def multiplayer_menu():
 def pause_menu(current_score):
     running = True
     player_name = ""  # Initialize player_name here
-    base_font = pygame.font.Font("./assets/8bit_font.ttf", 32)  # Font for name input
-    prompt_font = pygame.font.Font("./assets/8bit_font.ttf", 36)  # Font for the prompt text
+
 
     # Define vertical positions
     input_box_y = HEIGHT // 2 + 50
-    name_prompt_y = input_box_y - 40
+
     button_start_y = HEIGHT // 2 + 100
     vertical_gap = 80
 
     # Define the input box and prompt
     input_box = pygame.Rect(WIDTH // 2 - 100, input_box_y, 200, 32)
-    color_inactive = pygame.Color('lightskyblue3')
-    color_active = pygame.Color('dodgerblue2')
-    color = color_inactive
+
     input_active = False
 
-    cursor_blink_timer = pygame.time.get_ticks()
-    cursor_blink_interval = 500  # Cursor blinks every 500 milliseconds
 
-    # Load scores and determine rank
-    scores = load_scores()
-    current_rank = None
-    if scores:
-        sorted_scores = sorted(scores + [{"player_name": "current", "score": current_score}], key=lambda x: x['score'], reverse=True)
-        current_rank = sorted_scores.index({"player_name": "current", "score": current_score}) + 1
+     
 
     while running:
         screen.fill((0, 0, 0))
@@ -801,7 +791,6 @@ def pause_menu(current_score):
                     input_active = not input_active
                 else:
                     input_active = False
-                color = color_active if input_active else color_inactive
                 mouse_pos = event.pos
                 if resume_btn.collidepoint(mouse_pos):
                     running = False
@@ -815,7 +804,6 @@ def pause_menu(current_score):
                         if player_name:  # Save only if name is entered
                             save_score(player_name, current_score)
                         input_active = False
-                        color = color_inactive
                     elif event.key == pygame.K_BACKSPACE:
                         player_name = player_name[:-1]
                     else:
@@ -843,7 +831,7 @@ def main_game():
     score = 0
     lives = player.lives
 
-    MAX_ENEMIES_PER_WAVE = 20
+    MAX_ENEMIES_PER_WAVE = 10
     enemies_spawned = 0
     enemies_killed = 0
 
@@ -889,7 +877,7 @@ def main_game():
                 all_sprites.add(alien_ship)
                 alien_ships.add(alien_ship)
             enemies_spawned += 1
-            if (len(enemies) + len(alien_ships)) ==  20:
+            if (len(enemies) + len(alien_ships)) ==  MAX_ENEMIES_PER_WAVE:
                 boss_hit_count = 0
                 all_sprites.add(boss)
                 boss_died = False
@@ -952,6 +940,8 @@ def main_game():
             enemies_spawned = 0
             if(boss_died):
                 level+=1
+                if MAX_ENEMIES_PER_WAVE < 30:
+                    MAX_ENEMIES_PER_WAVE += 5
 
 
         # Drawing
