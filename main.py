@@ -8,7 +8,7 @@ import json
 pygame.init()
 
 # Screen dimensions
-screen = pygame.display.set_mode((0, 0), pygame.RESIZABLE)
+screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
 WIDTH, HEIGHT = screen.get_size()
 pygame.display.set_caption("Galaxia")
 
@@ -452,6 +452,7 @@ def game_over(score):
     input_box_y = HEIGHT // 2 + 50
     name_prompt_y = input_box_y - 40
     button_start_y = HEIGHT // 2 + 150
+    vertical_gap = 80
 
     # Define the input box and prompt
     input_box = pygame.Rect(WIDTH // 2 - 100, input_box_y, 200, 32)
@@ -512,8 +513,7 @@ def game_over(score):
             pygame.draw.line(screen, WHITE, (cursor_x, cursor_y), (cursor_x, cursor_y + 24), 2)
 
         # Adjust button positions
-        done_btn = create_button("Done", WIDTH // 2, button_start_y)
-
+        cont_btn = create_button("Continue", WIDTH // 2, button_start_y)
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -528,11 +528,10 @@ def game_over(score):
                     color = color_inactive
 
                 mouse_pos = event.pos
-                if done_btn.collidepoint(mouse_pos):
+                if cont_btn.collidepoint(mouse_pos):
                     if player_name:  # Save only if name is entered
                         save_score(player_name, score)
-                        running=False
-                        game_over_menu()
+                        game_over_menu(score)
             elif event.type == pygame.KEYDOWN:
                 if input_active:
                     if event.key == pygame.K_RETURN:
@@ -548,7 +547,8 @@ def game_over(score):
         pygame.display.flip()
 
 
-def game_over_menu():
+def game_over_menu(score):
+    player_name = ""  # Initialize player_name here
     base_font = pygame.font.Font("./assets/8bit_font.ttf", 32)  # Font for name input
     prompt_font = pygame.font.Font("./assets/8bit_font.ttf", 36)  # Font for the prompt text
 
@@ -565,6 +565,18 @@ def game_over_menu():
     color = color_inactive
     input_active = False
 
+    # Timer for cursor blinking
+    cursor_blink_timer = pygame.time.get_ticks()
+    cursor_blink_interval = 500  # Cursor blinks every 500 milliseconds
+
+    # Load scores and determine rank
+    scores = load_scores()
+    current_rank = None
+    if scores:
+        # Corrected line
+        sorted_scores = sorted(scores + [{"player_name": "current", "score": score}], key=lambda x: x['score'], reverse=True)
+        current_rank = sorted_scores.index({"player_name": "current", "score": score}) + 1
+
     running = True
     while running:
         screen.fill((0, 0, 0))
@@ -572,16 +584,27 @@ def game_over_menu():
         for star in stars:
             star.move()
             star.draw(screen)
-                
+
         settings_text = font.render("GAME OVER", True, WHITE)
         settings_rect = settings_text.get_rect(center=(WIDTH // 2, HEIGHT // 3))
         screen.blit(settings_text, settings_rect)
+
+        score_text = font.render(f"Your Score is {score}", True, YELLOW)
+        score_rect = score_text.get_rect(center=(WIDTH // 2, HEIGHT // 3 + 70))
+        screen.blit(score_text, score_rect)
+
+        if current_rank is not None:
+            rank_text = font.render(f"Your Rank is {current_rank}", True, YELLOW)
+            rank_rect = rank_text.get_rect(center=(WIDTH // 2, HEIGHT // 3 + 150))
+            screen.blit(rank_text, rank_rect)
+
+  
 
 
         # Adjust button positions
         replay_btn = create_button("Replay", WIDTH // 2, button_start_y)
         scores_btn = create_button("Scores", WIDTH // 2, button_start_y + vertical_gap)
-        exit_btn = create_button("Exit", WIDTH // 2, button_start_y + 3 * vertical_gap)
+        exit_btn = create_button("Exit", WIDTH // 2, button_start_y + 2 * vertical_gap)
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -601,6 +624,8 @@ def game_over_menu():
                 elif scores_btn.collidepoint(mouse_pos):
                     high_scores_screen()
                 elif exit_btn.collidepoint(mouse_pos):
+                    if player_name:  # Save only if name is entered
+                        save_score(player_name, score)
                     main_menu()
             elif event.type == pygame.KEYDOWN:
                 if input_active:
@@ -761,25 +786,6 @@ def pause_menu(current_score):
         score_rect = score_text.get_rect(center=(WIDTH // 2, HEIGHT // 3 + 70))
         screen.blit(score_text, score_rect)
 
-
-        # if current_rank is not None:
-        #     rank_text = font.render(f"Your Rank is {current_rank}", True, YELLOW)
-        #     rank_rect = rank_text.get_rect(center=(WIDTH // 2, HEIGHT // 3 + 120))
-        #     screen.blit(rank_text, rank_rect)
-
-        # name_prompt = prompt_font.render("Enter your name:", True, WHITE)
-        # name_prompt_rect = name_prompt.get_rect(center=(WIDTH // 2, name_prompt_y))
-        # screen.blit(name_prompt, name_prompt_rect)
-        # pygame.draw.rect(screen, color, input_box, 2)
-        # name_surface = base_font.render(player_name, True, WHITE)
-        # screen.blit(name_surface, (input_box.x + 5, input_box.y + 5))
-        # input_box.w = max(200, name_surface.get_width() + 10)
-
-        # now = pygame.time.get_ticks()
-        # if not input_active and not player_name and (now - cursor_blink_timer) % (2 * cursor_blink_interval) < cursor_blink_interval:
-        #     cursor_x = input_box.x + name_surface.get_width() + 5
-        #     cursor_y = input_box.y + 5
-        #     pygame.draw.line(screen, WHITE, (cursor_x, cursor_y), (cursor_x, cursor_y + 24), 2)
 
         # Adjust button positions
         resume_btn = create_button("Resume", WIDTH // 2, button_start_y)
@@ -944,7 +950,8 @@ def main_game():
 
         if (len(enemies) + len(alien_ships)) == 0:
             enemies_spawned = 0
-            level += 1
+            if(boss_died):
+                level+=1
 
 
         # Drawing
